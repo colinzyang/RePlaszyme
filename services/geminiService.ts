@@ -1,17 +1,8 @@
 import { GoogleGenAI } from "@google/genai";
 
-const apiKey = process.env.API_KEY || '';
-const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const analyzeProteinSequence = async (sequence: string): Promise<string> => {
-    if (!ai) {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve(`**Simulated Analysis:**\n\nBased on the input sequence, this protein exhibits high similarity (98%) to **IsPETase** from *Ideonella sakaiensis*.\n\n**Predicted Function:** Hydrolysis of Polyethylene terephthalate (PET) into MHET and EG.\n\n**Structural Features:** Contains a canonical alpha/beta hydrolase fold with a surface-exposed catalytic triad (Ser-His-Asp).`);
-            }, 1500);
-        });
-    }
-
     try {
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',

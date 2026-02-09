@@ -13,24 +13,36 @@ const getCategoryColor = (cat: string) => {
 
 const Timeline: React.FC = () => {
     return (
-        <section className="glass-panel rounded-3xl p-6 md:p-8">
-            <h2 className="text-xl font-light text-primary mb-6 flex items-center gap-2">
-                <span className="material-symbols-outlined">history</span>
-                Database Updates
-            </h2>
-            <div className="relative border-l border-slate-200 ml-3 space-y-8">
-                {TIMELINE_EVENTS.map((event) => (
-                    <div key={event.id} className="relative pl-8 group">
-                        <span className={`absolute left-[-5px] top-1 w-2.5 h-2.5 rounded-full border border-white shadow-sm ring-4 ring-white ${event.category === 'New Data' ? 'bg-emerald-500' : 'bg-accent'}`}></span>
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
-                            <span className="text-xs font-mono text-slate-400">{event.date}</span>
-                            <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider border w-fit ${getCategoryColor(event.category)}`}>
-                                {event.category}
-                            </span>
+        <section className="glass-panel rounded-3xl p-6 md:p-10 relative overflow-hidden">
+            
+            {/* Standardized Header */}
+            <header className="mb-8 border-b border-slate-200 pb-6">
+                <div className="flex items-center gap-2 mb-1 text-accent">
+                    <span className="material-symbols-outlined text-lg">history</span>
+                    <span className="text-[10px] font-bold tracking-wider uppercase">Project History</span>
+                </div>
+                <h1 className="text-2xl font-light text-primary">Database Updates</h1>
+                <p className="text-slate-500 text-xs mt-2 max-w-2xl">
+                    Track the evolution of PlaszymeDB, including new enzyme additions, structural updates, and platform maintenance.
+                </p>
+            </header>
+
+            {/* Inner Panel Style */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 md:p-8">
+                <div className="relative border-l border-slate-200 ml-3 space-y-10">
+                    {TIMELINE_EVENTS.map((event) => (
+                        <div key={event.id} className="relative pl-8 group">
+                            <span className={`absolute left-[-5px] top-1.5 w-2.5 h-2.5 rounded-full border border-white shadow-sm ring-4 ring-white ${event.category === 'New Data' ? 'bg-emerald-500' : 'bg-accent'}`}></span>
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
+                                <span className="text-[10px] font-mono text-slate-400 font-medium">{event.date}</span>
+                                <span className={`px-2 py-0.5 rounded-[4px] text-[10px] uppercase font-bold tracking-wider border w-fit ${getCategoryColor(event.category)}`}>
+                                    {event.category}
+                                </span>
+                            </div>
+                            <h3 className="text-sm font-medium text-primary group-hover:text-accent transition-colors cursor-pointer">{event.title}</h3>
                         </div>
-                        <h3 className="text-sm font-medium text-primary group-hover:text-accent transition-colors cursor-pointer">{event.title}</h3>
-                    </div>
-                ))}
+                    ))}
+                </div>
             </div>
         </section>
     );

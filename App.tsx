@@ -8,10 +8,11 @@ import Browse from './components/Browse';
 import Blast from './components/Blast';
 import Phylogeny from './components/Phylogeny';
 import EnzymeDetail from './components/EnzymeDetail';
+import Predictor from './components/Predictor';
 import About from './components/About';
 import { Enzyme } from './types';
 
-type View = 'home' | 'browse' | 'blast' | 'phylogeny' | 'about' | 'detail';
+type View = 'home' | 'browse' | 'blast' | 'phylogeny' | 'predictor' | 'about' | 'detail';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('home');
@@ -19,8 +20,8 @@ const App: React.FC = () => {
 
   const handleNavigate = (view: string) => {
     setCurrentView(view as View);
-    // Scroll to top when navigating
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Scroll to top immediately when navigating
+    window.scrollTo(0, 0);
     if (view !== 'detail') {
         setSelectedEnzyme(null);
     }
@@ -29,7 +30,7 @@ const App: React.FC = () => {
   const handleSelectEnzyme = (enzyme: Enzyme) => {
       setSelectedEnzyme(enzyme);
       setCurrentView('detail');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo(0, 0);
   };
 
   const renderContent = () => {
@@ -44,6 +45,8 @@ const App: React.FC = () => {
               );
           case 'browse':
               return <Browse onSelectEnzyme={handleSelectEnzyme} />;
+          case 'predictor':
+              return <Predictor />;
           case 'blast':
               return <Blast />;
           case 'phylogeny':
@@ -71,7 +74,7 @@ const App: React.FC = () => {
       <Navbar currentPage={currentView} onNavigate={handleNavigate} />
       
       <main className="relative z-10 flex-grow pt-32 pb-20 px-4 md:px-8 min-h-screen">
-        <div className="max-w-[1200px] mx-auto">
+        <div className="max-w-6xl mx-auto">
           {renderContent()}
         </div>
       </main>

@@ -12,11 +12,11 @@ const StatsCards: React.FC = () => {
                     <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center border border-blue-100 text-blue-600">
                         <span className="material-symbols-outlined">dataset</span>
                     </div>
-                    <h3 className="text-primary font-medium">Total Enzymes</h3>
+                    <h3 className="text-primary text-sm font-medium">Total Enzymes</h3>
                 </div>
                 <div>
-                    <p className="text-3xl font-light text-primary">1,248</p>
-                    <p className="text-slate-500 text-xs">Curated sequences</p>
+                    <p className="text-2xl font-light text-primary">1,248</p>
+                    <p className="text-slate-500 text-[10px]">Curated sequences</p>
                 </div>
             </div>
 
@@ -29,11 +29,11 @@ const StatsCards: React.FC = () => {
                     <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center border border-emerald-100 text-emerald-600">
                         <span className="material-symbols-outlined">category</span>
                     </div>
-                    <h3 className="text-primary font-medium">Substrates</h3>
+                    <h3 className="text-primary text-sm font-medium">Substrates</h3>
                 </div>
                 <div>
-                    <p className="text-3xl font-light text-primary">8</p>
-                    <p className="text-slate-500 text-xs">Types (PET, PE, PUR...)</p>
+                    <p className="text-2xl font-light text-primary">8</p>
+                    <p className="text-slate-500 text-[10px]">Types (PET, PE, PUR...)</p>
                 </div>
             </div>
 
@@ -46,11 +46,11 @@ const StatsCards: React.FC = () => {
                     <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center border border-amber-100 text-amber-600">
                         <span className="material-symbols-outlined">deployed_code</span>
                     </div>
-                    <h3 className="text-primary font-medium">Structures</h3>
+                    <h3 className="text-primary text-sm font-medium">Structures</h3>
                 </div>
                 <div>
-                    <p className="text-3xl font-light text-primary">342</p>
-                    <p className="text-slate-500 text-xs">PDB & AlphaFold Models</p>
+                    <p className="text-2xl font-light text-primary">342</p>
+                    <p className="text-slate-500 text-[10px]">PDB & AlphaFold Models</p>
                 </div>
             </div>
 
@@ -63,11 +63,11 @@ const StatsCards: React.FC = () => {
                     <div className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center border border-purple-100 text-purple-600">
                         <span className="material-symbols-outlined">pets</span>
                     </div>
-                    <h3 className="text-primary font-medium">Sources</h3>
+                    <h3 className="text-primary text-sm font-medium">Sources</h3>
                 </div>
                 <div>
-                    <p className="text-3xl font-light text-primary">560+</p>
-                    <p className="text-slate-500 text-xs">Species recorded</p>
+                    <p className="text-2xl font-light text-primary">560+</p>
+                    <p className="text-slate-500 text-[10px]">Species recorded</p>
                 </div>
             </div>
         </section>

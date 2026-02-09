@@ -23,11 +23,9 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
 
     return (
         <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pt-6 px-4">
-            <nav className="glass-panel rounded-full px-6 py-3 flex items-center justify-between w-full max-w-[1024px] shadow-lg shadow-black/5">
+            <nav className="glass-panel rounded-full px-6 py-3 flex items-center justify-between w-full max-w-6xl shadow-lg shadow-black/5">
                 <div className="flex items-center gap-3 cursor-pointer" onClick={() => onNavigate('home')}>
-                    <div className="text-accent flex items-center justify-center w-8 h-8 rounded-full bg-accent/10 border border-accent/20">
-                        <span className="material-symbols-outlined text-[20px]">recycling</span>
-                    </div>
+                    <img src="assets/logo.svg" alt="PlaszymeDB Logo" className="w-9 h-9 object-contain" />
                     <h2 className="text-primary text-base font-semibold tracking-tight">
                         Plaszyme<span className="text-accent font-light">DB</span>
                     </h2>
@@ -36,6 +34,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
                 <div className="hidden md:flex items-center gap-8">
                     <span className={navLinkClass('home')} onClick={() => onNavigate('home')}>Home</span>
                     <span className={navLinkClass('browse')} onClick={() => onNavigate('browse')}>Browse</span>
+                    <span className={navLinkClass('predictor')} onClick={() => onNavigate('predictor')}>Predictor</span>
                     <span className={navLinkClass('blast')} onClick={() => onNavigate('blast')}>BLAST</span>
                     <span className={navLinkClass('phylogeny')} onClick={() => onNavigate('phylogeny')}>Phylogeny</span>
                     <span className={navLinkClass('about')} onClick={() => onNavigate('about')}>About</span>
