@@ -1,6 +1,9 @@
 export interface Enzyme {
-    id: string;
-    accession: string;
+    id: string;  // Plaszyme ID (e.g., X0001, X0031)
+    plaszymeId: string;  // Explicit Plaszyme ID for clarity
+    accession: string;  // External database accession (GenBank/UniProt)
+    genbankId?: string;  // Primary GenBank ID from identifiers table
+    uniprotId?: string;  // Primary UniProt ID from identifiers table
     name: string;
     ecNumber: string;
     organism: string;
@@ -10,7 +13,7 @@ export interface Enzyme {
     weight: string; // kDa
     temperature: string; // Optimal Temp
     ph: string; // Optimal pH
-    pdbId?: string;
+    pdbId?: string;  // Primary PDB ID from identifiers table
     sequence: string;
     reference: string;
     structureUrl?: string;  // S3 URL for custom structures

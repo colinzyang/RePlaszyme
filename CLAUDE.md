@@ -424,6 +424,7 @@ async def predict_enzyme_activity(sequence: str):
 
 **S3 Structure Files:**
 Upload PDB files to S3 bucket:
-- Pattern: `https://plaszyme-assets.s3.amazonaws.com/pdb_predicted/{accession}.pdb`
+- Bucket URL: `https://plaszyme-assets.s3.us-east-1.amazonaws.com/pdb_predicted/`
+- Pattern: `https://plaszyme-assets.s3.us-east-1.amazonaws.com/pdb_predicted/{accession}.pdb`
 - URLs already generated in database `structure_url` field
 - Configure S3 CORS for browser access from frontend domain

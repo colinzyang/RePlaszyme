@@ -40,8 +40,11 @@ DB_PATH = Path(__file__).parent.parent / "plaszyme.db"
 
 # Pydantic models
 class EnzymeResponse(BaseModel):
-    id: str
-    accession: str
+    id: str  # Plaszyme ID (e.g., X0001, X0031)
+    plaszymeId: str  # Explicit Plaszyme ID for clarity
+    accession: str  # External database accession (GenBank/UniProt)
+    genbankId: Optional[str]  # Primary GenBank ID
+    uniprotId: Optional[str]  # Primary UniProt ID
     name: str
     ecNumber: str
     organism: str
@@ -83,6 +86,7 @@ def get_db():
 def row_to_enzyme(row: sqlite3.Row, cursor: sqlite3.Cursor) -> EnzymeResponse:
     """Convert database row to Enzyme response model"""
     enzyme_id = row['id']
+    plaszyme_id = row['protein_id']
 
     # Fetch plastic substrates (major types only)
     cursor.execute('''
@@ -103,9 +107,32 @@ def row_to_enzyme(row: sqlite3.Row, cursor: sqlite3.Cursor) -> EnzymeResponse:
     pdb_result = cursor.fetchone()
     pdb_id = pdb_result[0] if pdb_result else None
 
+    # Fetch primary GenBank ID
+    cursor.execute('''
+        SELECT identifier_value
+        FROM identifiers
+        WHERE enzyme_id = ? AND identifier_type = 'genbank'
+        LIMIT 1
+    ''', (enzyme_id,))
+    genbank_result = cursor.fetchone()
+    genbank_id = genbank_result[0] if genbank_result else None
+
+    # Fetch primary UniProt ID
+    cursor.execute('''
+        SELECT identifier_value
+        FROM identifiers
+        WHERE enzyme_id = ? AND identifier_type = 'uniprot'
+        LIMIT 1
+    ''', (enzyme_id,))
+    uniprot_result = cursor.fetchone()
+    uniprot_id = uniprot_result[0] if uniprot_result else None
+
     return EnzymeResponse(
-        id=row['protein_id'],
-        accession=row['accession'] or row['protein_id'],
+        id=plaszyme_id,
+        plaszymeId=plaszyme_id,
+        accession=row['accession'] or plaszyme_id,
+        genbankId=genbank_id,
+        uniprotId=uniprot_id,
         name=row['enzyme_name'] or 'Unknown',
         ecNumber=row['ec_number'] or row['predicted_ec_number'] or 'N/A',
         organism=row['host_organism'] or 'Unknown',
@@ -188,7 +215,7 @@ def get_enzymes(
     data_query = f'''
         SELECT * FROM enzymes
         {where_clause}
-        ORDER BY enzyme_name, protein_id
+        ORDER BY protein_id
         LIMIT ? OFFSET ?
     '''
     cursor.execute(data_query, params + [limit, offset])
@@ -229,6 +256,62 @@ def get_enzyme_by_id(protein_id: str):
     conn.close()
 
     return enzyme
+
+
+@app.get("/api/enzymes/export")
+def export_all_enzymes(
+    search: Optional[str] = Query(None, description="Search term"),
+    plastic_types: Optional[List[str]] = Query(None, description="Filter by plastic types")
+):
+    """
+    Export all enzymes matching filters as CSV
+
+    Returns complete dataset based on current filters
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Build WHERE clause (same as get_enzymes)
+    where_conditions = []
+    params = []
+
+    if search:
+        where_conditions.append('''
+            (enzyme_name LIKE ? OR host_organism LIKE ? OR accession LIKE ?)
+        ''')
+        search_pattern = f"%{search}%"
+        params.extend([search_pattern, search_pattern, search_pattern])
+
+    if plastic_types:
+        placeholders = ','.join(['?'] * len(plastic_types))
+        where_conditions.append(f'''
+            id IN (
+                SELECT enzyme_id FROM plastic_substrates
+                WHERE substrate_code IN ({placeholders})
+            )
+        ''')
+        params.extend(plastic_types)
+
+    where_clause = f"WHERE {' AND '.join(where_conditions)}" if where_conditions else ""
+
+    # Get ALL results (no pagination)
+    data_query = f'''
+        SELECT * FROM enzymes
+        {where_clause}
+        ORDER BY protein_id
+    '''
+    cursor.execute(data_query, params)
+    rows = cursor.fetchall()
+
+    # Convert rows to enzyme models
+    enzymes = [row_to_enzyme(row, cursor) for row in rows]
+
+    conn.close()
+
+    return {
+        "data": enzymes,
+        "total": len(enzymes)
+    }
 
 
 @app.get("/api/stats", response_model=DatabaseStats)

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getEnzymes } from '@/services/api/databaseService';
+import { getEnzymes, exportAllEnzymes } from '@/services/api/databaseService';
 import { Enzyme, PlasticType } from '../types';
 
 interface BrowseProps {
@@ -96,13 +96,37 @@ const Browse: React.FC<BrowseProps> = ({ onSelectEnzyme }) => {
         setCurrentPage(1);
     };
 
-    const exportData = () => {
-        const dataToExport = enzymes.filter(e => selectedIds.size === 0 || selectedIds.has(e.id));
-        const csvContent = "data:text/csv;charset=utf-8,"
-            + "ID,Name,Organism,EC Number,Plastic Types\n"
-            + dataToExport.map(e => `${e.accession},${e.name},${e.organism},${e.ecNumber},"${e.plasticType.join(';')}"`).join("\n");
-        const encodedUri = encodeURI(csvContent);
-        window.open(encodedUri);
+    const exportData = async () => {
+        try {
+            // Fetch ALL data matching current filters (not just current page)
+            const allData = await exportAllEnzymes({
+                searchTerm,
+                plasticTypes: selectedPlastics
+            });
+
+            // Filter by selected IDs if any are selected
+            const dataToExport = selectedIds.size > 0
+                ? allData.filter(e => selectedIds.has(e.id))
+                : allData;
+
+            // Generate CSV with enriched data
+            const csvContent = "data:text/csv;charset=utf-8,"
+                + "Plaszyme ID,Name,Organism,Taxonomy,EC Number,Plastic Types,Sequence Length,GenBank ID,UniProt ID,PDB ID,Reference\n"
+                + dataToExport.map(e =>
+                    `${e.plaszymeId},"${e.name}","${e.organism}","${e.taxonomy}",${e.ecNumber},"${e.plasticType.join(';')}",${e.length},${e.genbankId || 'N/A'},${e.uniprotId || 'N/A'},${e.pdbId || 'N/A'},"${e.reference}"`
+                ).join("\n");
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement('a');
+            link.setAttribute('href', encodedUri);
+            link.setAttribute('download', `plaszyme_export_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (error) {
+            console.error('Failed to export data:', error);
+            alert('Failed to export data. Please try again.');
+        }
     };
 
     // Generate page numbers for pagination UI
@@ -243,7 +267,7 @@ const Browse: React.FC<BrowseProps> = ({ onSelectEnzyme }) => {
                                                     checked={enzymes.length > 0 && selectedIds.size === enzymes.length}
                                                 />
                                             </th>
-                                            <th className="px-2 py-3 whitespace-nowrap">Accession</th>
+                                            <th className="px-2 py-3 whitespace-nowrap">Plaszyme ID</th>
                                             <th className="px-2 py-3">Name</th>
                                             <th className="px-2 py-3">Organism</th>
                                             <th className="px-2 py-3">Substrate</th>
@@ -289,16 +313,20 @@ const Browse: React.FC<BrowseProps> = ({ onSelectEnzyme }) => {
                                                             onChange={() => toggleSelectOne(enzyme.id)}
                                                         />
                                                     </td>
-                                                    <td className="px-2 py-3 font-mono text-xs text-slate-500 whitespace-nowrap">{enzyme.accession}</td>
+                                                    <td className="px-2 py-3 font-mono text-xs text-slate-500 whitespace-nowrap">{enzyme.plaszymeId}</td>
                                                     <td className="px-2 py-3 text-xs font-medium text-primary break-words max-w-[12rem] lg:max-w-xs">{enzyme.name}</td>
                                                     <td className="px-2 py-3 text-xs text-slate-600 italic break-words max-w-[10rem] lg:max-w-xs">{enzyme.organism}</td>
                                                     <td className="px-2 py-3">
                                                         <div className="flex gap-1 flex-wrap">
-                                                            {enzyme.plasticType.map(pt => (
-                                                                <span key={pt} className="px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-700 border border-emerald-200 font-medium whitespace-nowrap">
-                                                                    {pt}
-                                                                </span>
-                                                            ))}
+                                                            {enzyme.plasticType.length > 0 ? (
+                                                                enzyme.plasticType.map(pt => (
+                                                                    <span key={pt} className="px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold whitespace-nowrap">
+                                                                        {pt}
+                                                                    </span>
+                                                                ))
+                                                            ) : (
+                                                                <span className="text-[10px] text-slate-400 italic">Not specified</span>
+                                                            )}
                                                         </div>
                                                     </td>
                                                     <td className="pl-2 pr-4 py-3 text-right whitespace-nowrap">

@@ -220,7 +220,7 @@ def get_primary_pdb(pdb_string):
 
 def generate_structure_url(accession):
     """Generate S3 URL for predicted structure (file may not exist yet)"""
-    return f"https://plaszyme-assets.s3.amazonaws.com/pdb_predicted/{accession}.pdb"
+    return f"https://plaszyme-assets.s3.us-east-1.amazonaws.com/pdb_predicted/{accession}.pdb"
 
 
 def validate_sequence(sequence):

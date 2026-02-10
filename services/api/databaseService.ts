@@ -124,6 +124,50 @@ export async function getEnzymeById(proteinId: string): Promise<Enzyme | null> {
 }
 
 /**
+ * Export all enzymes matching current filters
+ *
+ * @param options - Filter options (search term and plastic types)
+ * @returns All matching enzymes (not paginated)
+ * @throws Error if API request fails
+ */
+export async function exportAllEnzymes(
+    options: Pick<FilterOptions, 'searchTerm' | 'plasticTypes'> = {}
+): Promise<Enzyme[]> {
+    const { searchTerm = '', plasticTypes = [] } = options;
+
+    // Build query parameters
+    const params = new URLSearchParams();
+
+    if (searchTerm) {
+        params.append('search', searchTerm);
+    }
+
+    if (plasticTypes.length > 0) {
+        plasticTypes.forEach(type => params.append('plastic_types', type));
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/enzymes/export?${params}`);
+
+        if (!response.ok) {
+            if (response.status === 0) {
+                throw new Error('Network error: Unable to reach backend API.');
+            }
+            throw new Error(`API Error (${response.status}): ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        return result.data;
+    } catch (error) {
+        if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+            console.error('Network error details:', error);
+            throw new Error(`Cannot connect to backend API at ${API_BASE_URL}`);
+        }
+        throw error;
+    }
+}
+
+/**
  * Get database statistics
  *
  * @returns Database stats including enzyme count, organism count, structures, and substrates

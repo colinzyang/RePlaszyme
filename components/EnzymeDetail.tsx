@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Enzyme, PlasticType, StructureSource } from '../types';
 
 // Import Nightingale components
@@ -31,17 +31,35 @@ const getSubstrateImage = (type: PlasticType) => {
 };
 
 const EnzymeDetail: React.FC<EnzymeDetailProps> = ({ enzyme, onBack }) => {
-    
+
     // Refs for interaction logic
     const molstarRef = useRef<any>(null);
     const nightingaleRef = useRef<any>(null);
 
-    // Setup Bidirectional Interaction
+    // Loading state for 3D viewer
+    const [isStructureLoading, setIsStructureLoading] = useState(true);
+    const [structureError, setStructureError] = useState<string | null>(null);
+
+    // Setup Bidirectional Interaction and Loading States
     useEffect(() => {
         const molstarNode = molstarRef.current;
         const nightingaleNode = nightingaleRef.current;
 
+        // Reset loading state when enzyme changes
+        setIsStructureLoading(true);
+        setStructureError(null);
+
         if (!molstarNode || !nightingaleNode) return;
+
+        // Listen for Mol* ready event
+        const handleMolstarReady = () => {
+            setIsStructureLoading(false);
+        };
+
+        const handleMolstarError = () => {
+            setIsStructureLoading(false);
+            setStructureError('Failed to load structure. The PDB file may not be available.');
+        };
 
         // 1. Structure -> Sequence (Mol* to Nightingale)
         // Listen for Mol* hover events using the PDBe custom event
@@ -57,68 +75,37 @@ const EnzymeDetail: React.FC<EnzymeDetailProps> = ({ enzyme, onBack }) => {
             }
         };
 
-        // 2. Sequence -> Structure (Nightingale to Mol*)
-        // Nightingale emits 'change' on the sequence track when selected
-        // However, we need to attach the listener to the specific track or manager if configured
-        // A robust way for simple selection is listening to manager events or specific track interaction
-        
-        // We will use a custom approach: Listen to 'click' or selection change on Nightingale components
-        // Note: The standard way to drive external components from Nightingale is detecting property changes.
-        // But here we'll add a listener to the manager which bubbles events.
-        
-        // Helper to select in Mol*
-        const selectInMolstar = (start: number, end: number) => {
-            if (molstarNode.viewerInstance) {
-                molstarNode.viewerInstance.visual.select({
-                    data: [{
-                        start_residue_number: start,
-                        end_residue_number: end,
-                        // Focus on chain A by default or all chains
-                        struct_asym_id: 'A' 
-                    }],
-                    nonSelectedColor: { r: 255, g: 255, b: 255 } // Optional: Fade others
-                });
-            }
-        };
-
-        // NOTE: Nightingale manager handles coordinates. 
-        // We look for 'change' event on the manager to see zoom/scroll, but for specific residue clicks
-        // we often need to hook into the track.
-        // Let's rely on Nightingale's 'feature-click' or generic click if features were used.
-        // For raw sequence, it supports selection if configured.
-        
-        // For this implementation, we will assume the user uses the Sequence track for visual reference
-        // and add a listener for interactions if Nightingale exposes selection events.
-        // Currently, Nightingale 4.x focuses on Feature tracks for interaction. 
-        // We will implement a simpler "Highlight on Hover" from sequence to structure via mousemove for now,
-        // as full selection syncing requires more complex configured tracks.
-        
-        const handleSequenceInteraction = (e: any) => {
-            // This is a placeholder for advanced sequence-to-structure selection logic
-            // creating a custom event handler for Nightingale is complex without React wrappers.
-        };
-
         // Attach Mol* listener to document (PDBe dispatches to document)
         document.addEventListener('PDB.molstar.mouseover', handleMolstarHover);
-        document.addEventListener('PDB.molstar.click', handleMolstarHover); // Also handle click
+        document.addEventListener('PDB.molstar.click', handleMolstarHover);
+        document.addEventListener('PDB.molstar.loaded', handleMolstarReady);
+        document.addEventListener('PDB.molstar.error', handleMolstarError);
+
+        // Set a timeout fallback for loading state
+        const loadingTimeout = setTimeout(() => {
+            setIsStructureLoading(false);
+        }, 10000); // 10 second timeout
 
         return () => {
             document.removeEventListener('PDB.molstar.mouseover', handleMolstarHover);
             document.removeEventListener('PDB.molstar.click', handleMolstarHover);
+            document.removeEventListener('PDB.molstar.loaded', handleMolstarReady);
+            document.removeEventListener('PDB.molstar.error', handleMolstarError);
+            clearTimeout(loadingTimeout);
         };
     }, [enzyme.id]);
 
 
     const downloadFasta = () => {
-        const header = `>${enzyme.accession} | ${enzyme.name} | ${enzyme.organism}`;
+        const header = `>${enzyme.plaszymeId} | ${enzyme.name} | ${enzyme.organism}`;
         const formattedSeq = enzyme.sequence.match(/.{1,60}/g)?.join('\n') || enzyme.sequence;
         const content = `${header}\n${formattedSeq}`;
-        
+
         const blob = new Blob([content], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `${enzyme.accession}_${enzyme.name.replace(/\s+/g, '_')}.fasta`;
+        link.download = `${enzyme.plaszymeId}_${enzyme.name.replace(/\s+/g, '_')}.fasta`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -131,29 +118,17 @@ const EnzymeDetail: React.FC<EnzymeDetailProps> = ({ enzyme, onBack }) => {
 
     // Structure configuration with S3 support
     const getStructureConfig = () => {
-        // Priority 1: Custom S3 structure
-        if (enzyme.structureUrl) {
-            return {
-                source: 's3' as StructureSource,
-                url: enzyme.structureUrl,
-                displayText: 'Custom Structure'
-            };
-        }
+        // Priority 1: S3 structure using Plaszyme ID
+        // Always attempt to load from S3 first using the pattern: ${plaszymeId}.pdb
+        const s3Url = `https://plaszyme-assets.s3.us-east-1.amazonaws.com/pdb_predicted/${enzyme.plaszymeId}.pdb`;
 
-        // Priority 2: PDB experimental structure
-        if (enzyme.pdbId) {
-            return {
-                source: 'pdb' as StructureSource,
-                id: enzyme.pdbId,
-                displayText: `PDB: ${enzyme.pdbId}`
-            };
-        }
-
-        // Priority 3: AlphaFold prediction
+        // Use S3 as primary source (474 PDB files are hosted)
         return {
-            source: 'alphafold' as StructureSource,
-            id: enzyme.accession,
-            displayText: 'AlphaFold Prediction'
+            source: 's3' as StructureSource,
+            url: s3Url,
+            displayText: `Predicted Structure (${enzyme.plaszymeId})`,
+            fallbackPdb: enzyme.pdbId,
+            fallbackAlphaFold: enzyme.uniprotId || enzyme.accession
         };
     };
 
@@ -172,8 +147,8 @@ const EnzymeDetail: React.FC<EnzymeDetailProps> = ({ enzyme, onBack }) => {
                             Back to Search
                         </button>
                         <div className="flex gap-2">
-                             <span className="px-2 py-1 rounded-md bg-slate-100 text-slate-600 border border-slate-200 text-[10px] font-mono font-bold">
-                                {enzyme.accession}
+                            <span className="px-2 py-1 rounded-md bg-slate-100 text-slate-600 border border-slate-200 text-[10px] font-mono font-bold">
+                                {enzyme.plaszymeId}
                             </span>
                             <span className="px-2 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-100 text-[10px] font-bold font-mono">
                                 EC {enzyme.ecNumber}
@@ -184,9 +159,11 @@ const EnzymeDetail: React.FC<EnzymeDetailProps> = ({ enzyme, onBack }) => {
                     {/* Main Title & Stats */}
                     <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
                         <div>
-                             <h1 className="text-2xl md:text-3xl font-light text-primary mb-2 tracking-tight">{enzyme.name}</h1>
+                             <h1 className="text-2xl md:text-3xl font-light text-primary mb-2 tracking-tight">
+                                 {enzyme.name || 'Unnamed Enzyme'}
+                             </h1>
                              <div className="text-sm text-slate-600 italic mt-1">
-                                 {enzyme.organism}
+                                 {enzyme.organism || 'Unknown organism'}
                              </div>
                         </div>
                         
@@ -224,60 +201,55 @@ const EnzymeDetail: React.FC<EnzymeDetailProps> = ({ enzyme, onBack }) => {
                                     <span className="material-symbols-outlined text-amber-500 text-sm">deployed_code</span>
                                     3D Structure Viewer
                                 </h3>
-                                <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${
-                                    structureConfig.source === 's3'
-                                        ? 'bg-green-50 text-green-700 border border-green-100'
-                                        : structureConfig.source === 'pdb'
-                                        ? 'bg-amber-50 text-amber-700 border border-amber-100'
-                                        : 'bg-blue-50 text-blue-700 border border-blue-100'
-                                }`}>
+                                <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-green-50 text-green-700 border border-green-100">
                                     {structureConfig.displayText}
                                 </span>
                             </div>
                             <div className="relative h-[500px] w-full bg-slate-50 group">
-                                 {/* PDBe Molstar Web Component */}
-                                 {structureConfig.source === 's3' ? (
-                                    <PdbeMolstar
-                                        ref={molstarRef}
-                                        key={structureConfig.url}
-                                        custom-data-url={structureConfig.url}
-                                        custom-data-format="pdb"
-                                        hide-controls="true"
-                                        bg-color-r="248"
-                                        bg-color-g="250"
-                                        bg-color-b="252"
-                                        visual-style="cartoon"
-                                        lighting="matte"
-                                        hide-water="true"
-                                        subscribe-events="true"
-                                        className="w-full h-full"
-                                    ></PdbeMolstar>
-                                 ) : (
-                                    <PdbeMolstar
-                                        ref={molstarRef}
-                                        key={structureConfig.id}
-                                        molecule-id={structureConfig.id}
-                                        hide-controls="true"
-                                        bg-color-r="248"
-                                        bg-color-g="250"
-                                        bg-color-b="252"
-                                        visual-style="cartoon"
-                                        lighting="matte"
-                                        hide-water="true"
-                                        alphafold-view={structureConfig.source === 'alphafold' ? "true" : "false"}
-                                        subscribe-events="true"
-                                        className="w-full h-full"
-                                    ></PdbeMolstar>
-                                 )}
+                                {/* Loading Spinner Overlay */}
+                                {isStructureLoading && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-slate-50 z-20">
+                                        <div className="flex flex-col items-center gap-3">
+                                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-accent"></div>
+                                            <p className="text-xs text-slate-500">Loading 3D structure...</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Error Message */}
+                                {structureError && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-slate-50 z-20">
+                                        <div className="flex flex-col items-center gap-3 text-center p-4">
+                                            <span className="material-symbols-outlined text-4xl text-amber-400">warning</span>
+                                            <p className="text-sm text-slate-600">{structureError}</p>
+                                            {structureConfig.fallbackPdb && (
+                                                <p className="text-xs text-slate-400">Fallback: Try PDB {structureConfig.fallbackPdb}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* PDBe Molstar Web Component - Always use S3 URL */}
+                                <PdbeMolstar
+                                    ref={molstarRef}
+                                    key={structureConfig.url}
+                                    custom-data-url={structureConfig.url}
+                                    custom-data-format="pdb"
+                                    hide-controls="true"
+                                    bg-color-r="248"
+                                    bg-color-g="250"
+                                    bg-color-b="252"
+                                    visual-style="cartoon"
+                                    lighting="matte"
+                                    hide-water="true"
+                                    subscribe-events="true"
+                                    className="w-full h-full"
+                                ></PdbeMolstar>
 
                                 {/* Controls Overlay Hint */}
                                 <div className="absolute bottom-4 right-4 bg-white/80 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-10">
                                     <span className="text-[10px] text-slate-500 font-medium">
-                                        {structureConfig.source === 's3'
-                                            ? "Custom PDB Structure from S3"
-                                            : structureConfig.source === 'alphafold'
-                                            ? "Predicted by AlphaFold"
-                                            : "Experimental Crystal Structure"}
+                                        Predicted PDB Structure from S3
                                     </span>
                                 </div>
                             </div>
@@ -350,20 +322,29 @@ const EnzymeDetail: React.FC<EnzymeDetailProps> = ({ enzyme, onBack }) => {
                                 </h3>
                             </div>
                             <div className="p-6 flex flex-col items-center">
-                                <div className="w-full h-32 flex items-center justify-center mb-4 bg-white">
-                                    <img 
-                                        src={getSubstrateImage(enzyme.plasticType[0])} 
-                                        alt={`${enzyme.plasticType[0]} structure`}
-                                        className="max-w-full max-h-full object-contain opacity-80" 
-                                    />
-                                </div>
-                                <div className="flex flex-wrap gap-2 justify-center w-full">
-                                    {enzyme.plasticType.map(pt => (
-                                        <span key={pt} className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 text-[10px] font-bold shadow-sm">
-                                            {pt}
-                                        </span>
-                                    ))}
-                                </div>
+                                {enzyme.plasticType.length > 0 ? (
+                                    <>
+                                        <div className="w-full h-32 flex items-center justify-center mb-4 bg-white">
+                                            <img
+                                                src={getSubstrateImage(enzyme.plasticType[0])}
+                                                alt={`${enzyme.plasticType[0]} structure`}
+                                                className="max-w-full max-h-full object-contain opacity-80"
+                                            />
+                                        </div>
+                                        <div className="flex flex-wrap gap-2 justify-center w-full">
+                                            {enzyme.plasticType.map(pt => (
+                                                <span key={pt} className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 text-[10px] font-bold shadow-sm">
+                                                    {pt}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="text-center py-6">
+                                        <span className="material-symbols-outlined text-slate-300 text-4xl mb-2 block">question_mark</span>
+                                        <p className="text-xs text-slate-400 italic">Substrate not specified</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -378,18 +359,24 @@ const EnzymeDetail: React.FC<EnzymeDetailProps> = ({ enzyme, onBack }) => {
                             <div className="p-4 space-y-4">
                                 <div>
                                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1">Organism</span>
-                                    <span className="text-xs font-medium text-slate-700 italic">{enzyme.organism}</span>
+                                    <span className="text-xs font-medium text-slate-700 italic">
+                                        {enzyme.organism || 'Not specified'}
+                                    </span>
                                 </div>
-                                <div>
-                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1">Lineage</span>
-                                    <div className="flex flex-wrap gap-1 mt-1">
-                                        {enzyme.taxonomy.split(';').map((tax, i) => (
-                                            <span key={i} className="text-[10px] text-slate-500 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-md">
-                                                {tax.trim()}
-                                            </span>
-                                        ))}
+                                {enzyme.taxonomy && enzyme.taxonomy.trim() && (
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1">Lineage</span>
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                            {enzyme.taxonomy.split(';').map((tax, i) => (
+                                                tax.trim() && (
+                                                    <span key={i} className="text-[10px] text-slate-500 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-md">
+                                                        {tax.trim()}
+                                                    </span>
+                                                )
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
                         </div>
 
@@ -402,18 +389,30 @@ const EnzymeDetail: React.FC<EnzymeDetailProps> = ({ enzyme, onBack }) => {
                                 </h3>
                             </div>
                             <div className="divide-y divide-slate-50">
-                                <a href={`https://www.ncbi.nlm.nih.gov/protein/${enzyme.accession}`} target="_blank" rel="noreferrer" className="flex items-center justify-between px-4 py-2.5 hover:bg-slate-50 transition-colors group">
-                                    <span className="text-xs font-medium text-slate-600">NCBI Protein</span>
-                                    <span className="text-[10px] text-slate-400 flex items-center gap-1 group-hover:text-accent">
-                                        {enzyme.accession} <span className="material-symbols-outlined text-[12px]">open_in_new</span>
-                                    </span>
-                                </a>
-                                <a href={`https://www.uniprot.org/uniprot/${enzyme.accession}`} target="_blank" rel="noreferrer" className="flex items-center justify-between px-4 py-2.5 hover:bg-slate-50 transition-colors group">
-                                    <span className="text-xs font-medium text-slate-600">UniProtKB</span>
-                                    <span className="text-[10px] text-slate-400 flex items-center gap-1 group-hover:text-accent">
-                                        {enzyme.accession} <span className="material-symbols-outlined text-[12px]">open_in_new</span>
-                                    </span>
-                                </a>
+                                <div className="px-4 py-2.5 bg-slate-50/50">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-bold text-slate-700">Plaszyme ID</span>
+                                        <span className="text-[10px] font-mono text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">
+                                            {enzyme.plaszymeId}
+                                        </span>
+                                    </div>
+                                </div>
+                                {enzyme.genbankId && (
+                                    <a href={`https://www.ncbi.nlm.nih.gov/protein/${enzyme.genbankId}`} target="_blank" rel="noreferrer" className="flex items-center justify-between px-4 py-2.5 hover:bg-slate-50 transition-colors group">
+                                        <span className="text-xs font-medium text-slate-600">NCBI GenBank</span>
+                                        <span className="text-[10px] text-slate-400 flex items-center gap-1 group-hover:text-accent">
+                                            {enzyme.genbankId} <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+                                        </span>
+                                    </a>
+                                )}
+                                {enzyme.uniprotId && (
+                                    <a href={`https://www.uniprot.org/uniprot/${enzyme.uniprotId}`} target="_blank" rel="noreferrer" className="flex items-center justify-between px-4 py-2.5 hover:bg-slate-50 transition-colors group">
+                                        <span className="text-xs font-medium text-slate-600">UniProtKB</span>
+                                        <span className="text-[10px] text-slate-400 flex items-center gap-1 group-hover:text-accent">
+                                            {enzyme.uniprotId} <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+                                        </span>
+                                    </a>
+                                )}
                                 {enzyme.pdbId && (
                                     <a href={`https://www.rcsb.org/structure/${enzyme.pdbId}`} target="_blank" rel="noreferrer" className="flex items-center justify-between px-4 py-2.5 hover:bg-slate-50 transition-colors group">
                                         <span className="text-xs font-medium text-slate-600">RCSB PDB</span>
@@ -422,18 +421,28 @@ const EnzymeDetail: React.FC<EnzymeDetailProps> = ({ enzyme, onBack }) => {
                                         </span>
                                     </a>
                                 )}
+                                {enzyme.uniprotId && (
+                                    <a href={`https://alphafold.ebi.ac.uk/entry/${enzyme.uniprotId}`} target="_blank" rel="noreferrer" className="flex items-center justify-between px-4 py-2.5 hover:bg-slate-50 transition-colors group">
+                                        <span className="text-xs font-medium text-slate-600">AlphaFold DB</span>
+                                        <span className="text-[10px] text-slate-400 flex items-center gap-1 group-hover:text-accent">
+                                            {enzyme.uniprotId} <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+                                        </span>
+                                    </a>
+                                )}
                             </div>
                         </div>
 
                         {/* Reference */}
-                        <div className="bg-amber-50/50 rounded-xl border border-amber-100/50 p-4">
-                            <h4 className="text-[10px] font-bold text-amber-800 uppercase tracking-wider mb-2 flex items-center gap-1">
-                                 <span className="material-symbols-outlined text-xs">menu_book</span> Primary Reference
-                            </h4>
-                            <p className="text-[10px] text-amber-900/80 leading-relaxed italic">
-                                "{enzyme.reference}"
-                            </p>
-                        </div>
+                        {enzyme.reference && enzyme.reference !== 'Unpublished' && (
+                            <div className="bg-amber-50/50 rounded-xl border border-amber-100/50 p-4">
+                                <h4 className="text-[10px] font-bold text-amber-800 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                     <span className="material-symbols-outlined text-xs">menu_book</span> Primary Reference
+                                </h4>
+                                <p className="text-[10px] text-amber-900/80 leading-relaxed italic">
+                                    "{enzyme.reference}"
+                                </p>
+                            </div>
+                        )}
 
                     </div>
                 </div>
