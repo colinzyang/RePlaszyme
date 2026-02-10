@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { analyzeProteinSequence } from '../services/geminiService';
+import { analyzeProteinSequence } from '@/services/predictionService';
 import { PlasticType } from '../types';
 
 const Blast: React.FC = () => {

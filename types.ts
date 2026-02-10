@@ -13,6 +13,7 @@ export interface Enzyme {
     pdbId?: string;
     sequence: string;
     reference: string;
+    structureUrl?: string;  // S3 URL for custom structures
 }
 
 export enum PlasticType {
@@ -37,3 +38,5 @@ export interface TimelineEvent {
     title: string;
     category: 'Update' | 'New Data' | 'Maintenance';
 }
+
+export type StructureSource = 'pdb' | 's3' | 'alphafold';

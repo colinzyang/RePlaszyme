@@ -1,5 +1,10 @@
 import React, { useEffect, useRef } from 'react';
-import { Enzyme, PlasticType } from '../types';
+import { Enzyme, PlasticType, StructureSource } from '../types';
+
+// Import Nightingale components
+import '@nightingale-elements/nightingale-manager';
+import '@nightingale-elements/nightingale-navigation';
+import '@nightingale-elements/nightingale-sequence';
 
 interface EnzymeDetailProps {
     enzyme: Enzyme;
@@ -124,10 +129,35 @@ const EnzymeDetail: React.FC<EnzymeDetailProps> = ({ enzyme, onBack }) => {
         navigator.clipboard.writeText(enzyme.sequence);
     };
 
-    // Mol* Configuration Logic
-    const hasPdb = !!enzyme.pdbId;
-    const structureId = enzyme.pdbId || enzyme.accession;
-    const isAlphaFold = !enzyme.pdbId;
+    // Structure configuration with S3 support
+    const getStructureConfig = () => {
+        // Priority 1: Custom S3 structure
+        if (enzyme.structureUrl) {
+            return {
+                source: 's3' as StructureSource,
+                url: enzyme.structureUrl,
+                displayText: 'Custom Structure'
+            };
+        }
+
+        // Priority 2: PDB experimental structure
+        if (enzyme.pdbId) {
+            return {
+                source: 'pdb' as StructureSource,
+                id: enzyme.pdbId,
+                displayText: `PDB: ${enzyme.pdbId}`
+            };
+        }
+
+        // Priority 3: AlphaFold prediction
+        return {
+            source: 'alphafold' as StructureSource,
+            id: enzyme.accession,
+            displayText: 'AlphaFold Prediction'
+        };
+    };
+
+    const structureConfig = getStructureConfig();
 
     return (
         <div className="w-full mx-auto animate-fade-in-up pb-12">
@@ -194,38 +224,60 @@ const EnzymeDetail: React.FC<EnzymeDetailProps> = ({ enzyme, onBack }) => {
                                     <span className="material-symbols-outlined text-amber-500 text-sm">deployed_code</span>
                                     3D Structure Viewer
                                 </h3>
-                                {hasPdb ? (
-                                    <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-100 px-2 py-0.5 rounded font-bold">
-                                        PDB: {enzyme.pdbId}
-                                    </span>
-                                ) : (
-                                    <span className="text-[10px] bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded font-bold">
-                                        AlphaFold Prediction
-                                    </span>
-                                )}
+                                <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${
+                                    structureConfig.source === 's3'
+                                        ? 'bg-green-50 text-green-700 border border-green-100'
+                                        : structureConfig.source === 'pdb'
+                                        ? 'bg-amber-50 text-amber-700 border border-amber-100'
+                                        : 'bg-blue-50 text-blue-700 border border-blue-100'
+                                }`}>
+                                    {structureConfig.displayText}
+                                </span>
                             </div>
                             <div className="relative h-[500px] w-full bg-slate-50 group">
                                  {/* PDBe Molstar Web Component */}
-                                 <PdbeMolstar 
-                                    ref={molstarRef}
-                                    key={structureId} 
-                                    molecule-id={structureId}
-                                    hide-controls="true"
-                                    bg-color-r="248" 
-                                    bg-color-g="250"
-                                    bg-color-b="252"
-                                    visual-style="cartoon" 
-                                    lighting="matte"
-                                    hide-water="true"
-                                    alphafold-view={isAlphaFold ? "true" : "false"}
-                                    subscribe-events="true" // Enable event emission
-                                    className="w-full h-full"
-                                ></PdbeMolstar>
-                                
+                                 {structureConfig.source === 's3' ? (
+                                    <PdbeMolstar
+                                        ref={molstarRef}
+                                        key={structureConfig.url}
+                                        custom-data-url={structureConfig.url}
+                                        custom-data-format="pdb"
+                                        hide-controls="true"
+                                        bg-color-r="248"
+                                        bg-color-g="250"
+                                        bg-color-b="252"
+                                        visual-style="cartoon"
+                                        lighting="matte"
+                                        hide-water="true"
+                                        subscribe-events="true"
+                                        className="w-full h-full"
+                                    ></PdbeMolstar>
+                                 ) : (
+                                    <PdbeMolstar
+                                        ref={molstarRef}
+                                        key={structureConfig.id}
+                                        molecule-id={structureConfig.id}
+                                        hide-controls="true"
+                                        bg-color-r="248"
+                                        bg-color-g="250"
+                                        bg-color-b="252"
+                                        visual-style="cartoon"
+                                        lighting="matte"
+                                        hide-water="true"
+                                        alphafold-view={structureConfig.source === 'alphafold' ? "true" : "false"}
+                                        subscribe-events="true"
+                                        className="w-full h-full"
+                                    ></PdbeMolstar>
+                                 )}
+
                                 {/* Controls Overlay Hint */}
                                 <div className="absolute bottom-4 right-4 bg-white/80 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-10">
                                     <span className="text-[10px] text-slate-500 font-medium">
-                                        {isAlphaFold ? "Predicted by AlphaFold" : "Experimental Crystal Structure"}
+                                        {structureConfig.source === 's3'
+                                            ? "Custom PDB Structure from S3"
+                                            : structureConfig.source === 'alphafold'
+                                            ? "Predicted by AlphaFold"
+                                            : "Experimental Crystal Structure"}
                                     </span>
                                 </div>
                             </div>

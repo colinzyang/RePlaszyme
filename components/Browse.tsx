@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { PLASZYME_DATA } from '../constants';
+import React, { useState, useEffect } from 'react';
+import { getEnzymes } from '@/services/api/databaseService';
 import { Enzyme, PlasticType } from '../types';
 
 interface BrowseProps {
@@ -7,35 +7,51 @@ interface BrowseProps {
 }
 
 const Browse: React.FC<BrowseProps> = ({ onSelectEnzyme }) => {
+    // State for async data
+    const [enzymes, setEnzymes] = useState<Enzyme[]>([]);
+    const [totalCount, setTotalCount] = useState(0);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    // Filter and UI state
     const [selectedPlastics, setSelectedPlastics] = useState<PlasticType[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-    
+
     // UI State for filter accordion - Default closed
     const [isFilterExpanded, setIsFilterExpanded] = useState(false);
-    
+
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
 
-    // Generate extended dummy data for demonstration purposes to show pagination
-    const allEnzymes = useMemo(() => {
-        const baseData = [...PLASZYME_DATA];
-        let extended = [...baseData];
-        // Multiply data to simulate a database with ~105 items
-        for (let i = 1; i <= 20; i++) {
-            extended = [
-                ...extended,
-                ...baseData.map(item => ({
-                    ...item,
-                    id: `${item.id}_copy_${i}`,
-                    accession: `${item.accession}-${i}`,
-                    name: `${item.name} (Variant ${i})`
-                }))
-            ];
-        }
-        return extended;
-    }, []);
+    // Fetch data when filters, search, or pagination changes
+    useEffect(() => {
+        const fetchEnzymes = async () => {
+            setIsLoading(true);
+            setError(null);
+
+            try {
+                const result = await getEnzymes({
+                    searchTerm,
+                    plasticTypes: selectedPlastics,
+                    page: currentPage,
+                    limit: itemsPerPage
+                });
+
+                setEnzymes(result.data);
+                setTotalCount(result.total);
+            } catch (err) {
+                console.error('Failed to fetch enzymes:', err);
+                const errorMessage = err instanceof Error ? err.message : 'Failed to load enzymes. Please ensure the backend API is running.';
+                setError(errorMessage);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchEnzymes();
+    }, [searchTerm, selectedPlastics, currentPage, itemsPerPage]);
 
     const togglePlastic = (type: PlasticType) => {
         if (selectedPlastics.includes(type)) {
@@ -52,10 +68,10 @@ const Browse: React.FC<BrowseProps> = ({ onSelectEnzyme }) => {
     };
 
     const toggleSelectAll = () => {
-        if (selectedIds.size === currentItems.length) {
+        if (selectedIds.size === enzymes.length) {
             setSelectedIds(new Set());
         } else {
-            setSelectedIds(new Set(currentItems.map(e => e.id)));
+            setSelectedIds(new Set(enzymes.map(e => e.id)));
         }
     };
 
@@ -66,21 +82,8 @@ const Browse: React.FC<BrowseProps> = ({ onSelectEnzyme }) => {
         setSelectedIds(newSet);
     };
 
-    // Filter Logic
-    const filteredData = allEnzymes.filter(enzyme => {
-        const matchesSearch = enzyme.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                              enzyme.organism.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                              enzyme.accession.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesPlastic = selectedPlastics.length === 0 || enzyme.plasticType.some(pt => selectedPlastics.includes(pt));
-        return matchesSearch && matchesPlastic;
-    });
-
-    // Pagination Logic
-    const totalItems = filteredData.length;
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
-    const indexOfLastItem = currentPage * itemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
+    // Calculate total pages from server total
+    const totalPages = Math.ceil(totalCount / itemsPerPage);
 
     const handlePageChange = (pageNumber: number) => {
         if (pageNumber >= 1 && pageNumber <= totalPages) {
@@ -94,8 +97,8 @@ const Browse: React.FC<BrowseProps> = ({ onSelectEnzyme }) => {
     };
 
     const exportData = () => {
-        const dataToExport = filteredData.filter(e => selectedIds.size === 0 || selectedIds.has(e.id));
-        const csvContent = "data:text/csv;charset=utf-8," 
+        const dataToExport = enzymes.filter(e => selectedIds.size === 0 || selectedIds.has(e.id));
+        const csvContent = "data:text/csv;charset=utf-8,"
             + "ID,Name,Organism,EC Number,Plastic Types\n"
             + dataToExport.map(e => `${e.accession},${e.name},${e.organism},${e.ecNumber},"${e.plasticType.join(';')}"`).join("\n");
         const encodedUri = encodeURI(csvContent);
@@ -200,7 +203,7 @@ const Browse: React.FC<BrowseProps> = ({ onSelectEnzyme }) => {
                         {/* Top Control Bar - Inner Panel Style */}
                         <div className="bg-slate-50/50 border border-slate-200 rounded-xl p-3 flex flex-col sm:flex-row justify-between items-center gap-4">
                             <div className="text-[10px] text-slate-500">
-                                Showing <span className="font-semibold text-primary">{totalItems > 0 ? indexOfFirstItem + 1 : 0}</span> to <span className="font-semibold text-primary">{Math.min(indexOfLastItem, totalItems)}</span> of <span className="font-semibold text-primary">{totalItems}</span> enzymes
+                                Showing <span className="font-semibold text-primary">{totalCount > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}</span> to <span className="font-semibold text-primary">{Math.min(currentPage * itemsPerPage, totalCount)}</span> of <span className="font-semibold text-primary">{totalCount}</span> enzymes
                             </div>
                             <div className="flex gap-3 items-center w-full sm:w-auto">
                                 <div className="flex items-center gap-2">
@@ -233,11 +236,11 @@ const Browse: React.FC<BrowseProps> = ({ onSelectEnzyme }) => {
                                     <thead>
                                         <tr className="bg-slate-50 text-slate-500 text-[10px] border-b border-slate-200 uppercase tracking-wider font-bold">
                                             <th className="pl-4 pr-2 py-3 w-10">
-                                                <input 
-                                                    type="checkbox" 
-                                                    className="rounded border-slate-300 text-accent focus:ring-accent" 
-                                                    onChange={toggleSelectAll} 
-                                                    checked={currentItems.length > 0 && selectedIds.size === currentItems.length} 
+                                                <input
+                                                    type="checkbox"
+                                                    className="rounded border-slate-300 text-accent focus:ring-accent"
+                                                    onChange={toggleSelectAll}
+                                                    checked={enzymes.length > 0 && selectedIds.size === enzymes.length}
                                                 />
                                             </th>
                                             <th className="px-2 py-3 whitespace-nowrap">Accession</th>
@@ -248,60 +251,73 @@ const Browse: React.FC<BrowseProps> = ({ onSelectEnzyme }) => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
-                                        {currentItems.map(enzyme => (
-                                            <tr key={enzyme.id} className="hover:bg-blue-50/30 transition-colors group">
-                                                <td className="pl-4 pr-2 py-3">
-                                                    <input 
-                                                        type="checkbox" 
-                                                        className="rounded border-slate-300 text-accent focus:ring-accent"
-                                                        checked={selectedIds.has(enzyme.id)}
-                                                        onChange={() => toggleSelectOne(enzyme.id)}
-                                                    />
-                                                </td>
-                                                <td className="px-2 py-3 font-mono text-xs text-slate-500 whitespace-nowrap">{enzyme.accession}</td>
-                                                <td className="px-2 py-3 text-xs font-medium text-primary break-words max-w-[12rem] lg:max-w-xs">{enzyme.name}</td>
-                                                <td className="px-2 py-3 text-xs text-slate-600 italic break-words max-w-[10rem] lg:max-w-xs">{enzyme.organism}</td>
-                                                <td className="px-2 py-3">
-                                                    <div className="flex gap-1 flex-wrap">
-                                                        {enzyme.plasticType.map(pt => (
-                                                            <span key={pt} className="px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-700 border border-emerald-200 font-medium whitespace-nowrap">
-                                                                {pt}
-                                                            </span>
-                                                        ))}
+                                        {isLoading ? (
+                                            <tr>
+                                                <td colSpan={6} className="px-4 py-12 text-center">
+                                                    <div className="flex flex-col items-center gap-3">
+                                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
+                                                        <p className="text-sm text-slate-500">Loading enzymes...</p>
                                                     </div>
                                                 </td>
-                                                <td className="pl-2 pr-4 py-3 text-right whitespace-nowrap">
-                                                    <button 
-                                                        onClick={() => onSelectEnzyme(enzyme)}
-                                                        className="px-3 py-1 rounded-full bg-white border border-accent/20 text-accent text-[10px] font-medium hover:bg-accent hover:text-white transition-all shadow-sm"
-                                                    >
-                                                        Details
-                                                    </button>
+                                            </tr>
+                                        ) : error ? (
+                                            <tr>
+                                                <td colSpan={6} className="px-4 py-12 text-center">
+                                                    <div className="flex flex-col items-center gap-3 max-w-lg mx-auto">
+                                                        <span className="material-symbols-outlined text-3xl text-red-400">error</span>
+                                                        <p className="text-sm text-red-600 whitespace-pre-line">{error}</p>
+                                                    </div>
                                                 </td>
                                             </tr>
-                                        ))}
-                                        {filteredData.length === 0 && (
+                                        ) : enzymes.length === 0 ? (
                                             <tr>
                                                 <td colSpan={6} className="px-4 py-12 text-center text-slate-400 text-sm">
                                                     <div className="flex flex-col items-center gap-2">
                                                         <span className="material-symbols-outlined text-3xl opacity-20">search_off</span>
-                                                        <p>No enzymes found matching your filters.</p>
-                                                        <button 
-                                                            onClick={() => {setSelectedPlastics([]); setSearchTerm('');}} 
-                                                            className="text-accent hover:underline mt-1"
-                                                        >
-                                                            Clear all filters
-                                                        </button>
+                                                        <span>No enzymes found. Try adjusting your filters.</span>
                                                     </div>
                                                 </td>
                                             </tr>
+                                        ) : (
+                                            enzymes.map(enzyme => (
+                                                <tr key={enzyme.id} className="hover:bg-blue-50/30 transition-colors group">
+                                                    <td className="pl-4 pr-2 py-3">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded border-slate-300 text-accent focus:ring-accent"
+                                                            checked={selectedIds.has(enzyme.id)}
+                                                            onChange={() => toggleSelectOne(enzyme.id)}
+                                                        />
+                                                    </td>
+                                                    <td className="px-2 py-3 font-mono text-xs text-slate-500 whitespace-nowrap">{enzyme.accession}</td>
+                                                    <td className="px-2 py-3 text-xs font-medium text-primary break-words max-w-[12rem] lg:max-w-xs">{enzyme.name}</td>
+                                                    <td className="px-2 py-3 text-xs text-slate-600 italic break-words max-w-[10rem] lg:max-w-xs">{enzyme.organism}</td>
+                                                    <td className="px-2 py-3">
+                                                        <div className="flex gap-1 flex-wrap">
+                                                            {enzyme.plasticType.map(pt => (
+                                                                <span key={pt} className="px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-700 border border-emerald-200 font-medium whitespace-nowrap">
+                                                                    {pt}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </td>
+                                                    <td className="pl-2 pr-4 py-3 text-right whitespace-nowrap">
+                                                        <button
+                                                            onClick={() => onSelectEnzyme(enzyme)}
+                                                            className="px-3 py-1 rounded-full bg-white border border-accent/20 text-accent text-[10px] font-medium hover:bg-accent hover:text-white transition-all shadow-sm"
+                                                        >
+                                                            Details
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))
                                         )}
                                     </tbody>
                                 </table>
                             </div>
 
                             {/* Pagination Footer */}
-                            {totalItems > 0 && (
+                            {totalCount > 0 && (
                                 <div className="border-t border-slate-200 p-3 flex flex-col md:flex-row items-center justify-between gap-4 bg-slate-50/50">
                                     <div className="text-[10px] text-slate-400">
                                         Page {currentPage} of {totalPages}

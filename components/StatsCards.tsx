@@ -1,6 +1,16 @@
 import React from 'react';
 
-const StatsCards: React.FC = () => {
+interface StatsCardsProps {
+    stats: {
+        totalEnzymes: number;
+        totalOrganisms: number;
+        totalStructures: number;
+        substrates: number;
+    } | null;
+    isLoading?: boolean;
+}
+
+const StatsCards: React.FC<StatsCardsProps> = ({ stats, isLoading = false }) => {
     return (
         <section className="grid grid-cols-1 md:grid-cols-4 gap-4 w-full">
             {/* Enzymes Count */}
@@ -15,7 +25,9 @@ const StatsCards: React.FC = () => {
                     <h3 className="text-primary text-sm font-medium">Total Enzymes</h3>
                 </div>
                 <div>
-                    <p className="text-2xl font-light text-primary">1,248</p>
+                    <p className="text-2xl font-light text-primary">
+                        {isLoading ? '—' : (stats?.totalEnzymes || '—')}
+                    </p>
                     <p className="text-slate-500 text-[10px]">Curated sequences</p>
                 </div>
             </div>
@@ -32,7 +44,9 @@ const StatsCards: React.FC = () => {
                     <h3 className="text-primary text-sm font-medium">Substrates</h3>
                 </div>
                 <div>
-                    <p className="text-2xl font-light text-primary">8</p>
+                    <p className="text-2xl font-light text-primary">
+                        {isLoading ? '—' : (stats?.substrates || '—')}
+                    </p>
                     <p className="text-slate-500 text-[10px]">Types (PET, PE, PUR...)</p>
                 </div>
             </div>
@@ -49,7 +63,9 @@ const StatsCards: React.FC = () => {
                     <h3 className="text-primary text-sm font-medium">Structures</h3>
                 </div>
                 <div>
-                    <p className="text-2xl font-light text-primary">342</p>
+                    <p className="text-2xl font-light text-primary">
+                        {isLoading ? '—' : (stats?.totalStructures || '—')}
+                    </p>
                     <p className="text-slate-500 text-[10px]">PDB & AlphaFold Models</p>
                 </div>
             </div>
@@ -66,7 +82,9 @@ const StatsCards: React.FC = () => {
                     <h3 className="text-primary text-sm font-medium">Sources</h3>
                 </div>
                 <div>
-                    <p className="text-2xl font-light text-primary">560+</p>
+                    <p className="text-2xl font-light text-primary">
+                        {isLoading ? '—' : (stats?.totalOrganisms ? `${stats.totalOrganisms}+` : '—')}
+                    </p>
                     <p className="text-slate-500 text-[10px]">Species recorded</p>
                 </div>
             </div>

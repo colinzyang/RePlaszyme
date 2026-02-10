@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { analyzeProteinSequence } from '../services/geminiService';
+import { predictPlasticDegradation } from '@/services/predictionService';
 
 interface PredictionResult {
     jobId: string;
@@ -12,6 +12,7 @@ interface PredictionResult {
         mechanism: string;
     };
     rawAnalysis: string;
+    source?: 'private-model' | 'gemini' | 'mock';
 }
 
 const Predictor: React.FC = () => {
@@ -54,36 +55,30 @@ const Predictor: React.FC = () => {
             setTimeout(async () => {
                 addLog(`Initializing ${model} inference engine...`);
                 addLog("Extracting evolutionary features (MSA)...");
-                
-                // Real Gemini Analysis
-                const aiAnalysis = await analyzeProteinSequence(sequence);
-                
+
+                // Call unified prediction service (Private Model → Gemini → Mock)
+                const predictionResult = await predictPlasticDegradation(sequence);
+
                 addLog("Predicting catalytic residues...");
                 addLog("Estimating physicochemical properties...");
-                
-                // Parse AI result or fallback to mock data if AI text is unstructured
-                // This extraction is heuristic based on the prompt we sent to Gemini
-                const enzymeMatch = aiAnalysis.match(/1\.\s*(.*?)(?:\n|$)/);
-                const substrateMatch = aiAnalysis.match(/2\.\s*(.*?)(?:\n|$)/);
-                
-                // Generate a random confidence score for "realism"
-                const mockConfidence = Math.floor(Math.random() * (98 - 75) + 75);
-                
+
+                // Use structured result from prediction service
                 setResult({
                     jobId: `JOB-${Math.floor(Math.random() * 100000)}`,
-                    enzymeFamily: enzymeMatch ? enzymeMatch[1].replace(/\*\*/g, '') : "Putative Hydrolase",
-                    confidence: mockConfidence,
-                    substrate: substrateMatch ? substrateMatch[1].replace(/\*\*/g, '') : "Polyester (General)",
+                    enzymeFamily: predictionResult.enzymeFamily,
+                    confidence: predictionResult.confidence,
+                    substrate: predictionResult.substrate,
                     properties: {
-                        temp: "30°C - 45°C", 
-                        ph: "7.0 - 8.5",     
+                        temp: "30°C - 45°C",
+                        ph: "7.0 - 8.5",
                         mechanism: "Serine-hydrolase triad (Ser-His-Asp)"
                     },
-                    rawAnalysis: aiAnalysis
+                    rawAnalysis: predictionResult.rawAnalysis,
+                    source: predictionResult.source
                 });
 
                 setJobStatus('completed');
-                addLog("Analysis pipeline completed successfully.");
+                addLog(`Analysis pipeline completed successfully. [Source: ${predictionResult.source}]`);
                 addLog("Results rendered.");
             }, 2000); // Wait 2s to simulate processing
         }, 800); // Wait 0.8s to simulate queue
@@ -221,9 +216,26 @@ const Predictor: React.FC = () => {
                                         <span className="material-symbols-outlined text-base text-emerald-500">check_circle</span>
                                         Prediction Successful
                                     </h3>
-                                    <span className="text-[10px] font-mono text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">
-                                        {result.jobId}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        {result.source === 'mock' && (
+                                            <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                                SIMULATION
+                                            </span>
+                                        )}
+                                        {result.source === 'gemini' && (
+                                            <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                                                GEMINI AI
+                                            </span>
+                                        )}
+                                        {result.source === 'private-model' && (
+                                            <span className="text-[9px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                                                PRIVATE MODEL
+                                            </span>
+                                        )}
+                                        <span className="text-[10px] font-mono text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">
+                                            {result.jobId}
+                                        </span>
+                                    </div>
                                 </div>
                                 
                                 <div className="p-4">

@@ -9,105 +9,10 @@
     <!-- PDBe Molstar -->
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/pdbe-molstar@3.2.0/build/pdbe-molstar.css">
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/pdbe-molstar@3.2.0/build/pdbe-molstar-plugin.js"></script>
-    
-    <!-- Nightingale Components -->
-    <script type="module" src="https://cdn.jsdelivr.net/npm/@nightingale-elements/nightingale-components@4.8.0/dist/index.js"></script>
-
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <script>
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    colors: {
-                        "primary": "#0f172a", // Deep Scientific Blue
-                        "accent": "#0ea5e9", // Vibrant Teal-ish Blue
-                        "accent-glow": "#38bdf8",
-                        "background-light": "#f8fafc", // Warm white/light gray
-                        "surface-light": "rgba(255, 255, 255, 0.7)",
-                        "border-light": "#e2e8f0",
-                    },
-                    fontFamily: {
-                        "display": ["Inter", "sans-serif"],
-                        "mono": ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", "monospace"],
-                    },
-                    backgroundImage: {
-                        'mesh-gradient-light': 'radial-gradient(at 0% 0%, rgba(255, 255, 255, 1) 0px, transparent 50%), radial-gradient(at 98% 1%, rgba(14, 165, 233, 0.08) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(255, 255, 255, 1) 0px, transparent 50%), radial-gradient(at 98% 100%, rgba(56, 189, 248, 0.12) 0px, transparent 50%), radial-gradient(at 50% 50%, #f8fafc 0px, transparent 50%)',
-                    }
-                },
-            },
-        }
-    </script>
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f8fafc;
-            color: #0f172a;
-            overflow-x: hidden;
-        }
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f5f9; 
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1; 
-            border-radius: 10px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8; 
-        }
-        .animated-mesh {
-            background-size: 200% 200%;
-            animation: moveGradient 20s ease infinite;
-        }
-        @keyframes moveGradient {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
-        }
-        .search-glass {
-            background: rgba(255, 255, 255, 0.6);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(15, 23, 42, 0.08);
-            box-shadow: 0 10px 40px -10px rgba(14, 165, 233, 0.15);
-        }
-        .input-glow:focus-within {
-            box-shadow: 0 0 25px -5px rgba(56, 189, 248, 0.25);
-            border-color: rgba(14, 165, 233, 0.4);
-            background: rgba(255, 255, 255, 0.85);
-        }
-        /* Utility for material symbols */
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-        }
-        
-        /* PDBe Molstar overrides */
-        .msp-plugin ::-webkit-scrollbar-thumb {
-            background-color: #cbd5e1 !important;
-        }
-    </style>
-<script type="importmap">
-{
-  "imports": {
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "react": "https://esm.sh/react@^19.2.4",
-    "react/": "https://esm.sh/react@^19.2.4/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.40.0"
-  }
-}
-</script>
 </head>
 <body class="min-h-screen flex flex-col relative bg-background-light text-primary">
     <div id="root"></div>
+    
+    <script type="module" src="/index.tsx"></script>
 </body>
 </html>

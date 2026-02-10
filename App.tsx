@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import StatsCards from './components/StatsCards';
@@ -10,13 +10,38 @@ import Phylogeny from './components/Phylogeny';
 import EnzymeDetail from './components/EnzymeDetail';
 import Predictor from './components/Predictor';
 import About from './components/About';
+import LoadingSpinner from './components/LoadingSpinner';
+import ErrorMessage from './components/ErrorMessage';
 import { Enzyme } from './types';
+import { getDatabaseStats, DatabaseStats } from './services/api/databaseService';
 
 type View = 'home' | 'browse' | 'blast' | 'phylogeny' | 'predictor' | 'about' | 'detail';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('home');
   const [selectedEnzyme, setSelectedEnzyme] = useState<Enzyme | null>(null);
+  const [dbStats, setDbStats] = useState<DatabaseStats | null>(null);
+  const [isStatsLoading, setIsStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState<string | null>(null);
+
+  // Load database statistics on mount
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        setIsStatsLoading(true);
+        setStatsError(null);
+        const stats = await getDatabaseStats();
+        setDbStats(stats);
+      } catch (error) {
+        console.error('Failed to load database statistics:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Failed to load database statistics. Please ensure the backend API is running.';
+        setStatsError(errorMessage);
+      } finally {
+        setIsStatsLoading(false);
+      }
+    };
+    loadStats();
+  }, []);
 
   const handleNavigate = (view: string) => {
     setCurrentView(view as View);
@@ -39,7 +64,8 @@ const App: React.FC = () => {
               return (
                   <div className="flex flex-col gap-16 animate-fade-in-up">
                       <Hero />
-                      <StatsCards />
+                      {statsError && <ErrorMessage message={statsError} />}
+                      <StatsCards stats={dbStats} isLoading={isStatsLoading} />
                       <Timeline />
                   </div>
               );
