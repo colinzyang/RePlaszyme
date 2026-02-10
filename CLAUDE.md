@@ -30,8 +30,8 @@ RePlaszyme/
 │   └── ...                 # Other view components
 ├── services/
 │   ├── api/
-│   │   └── databaseService.ts  # API client for backend
-│   └── geminiService.ts    # Gemini AI integration
+│   │   └── databaseService.ts   # API client for backend
+│   └── predictionService.ts     # Multi-model AI prediction (Gemini/Private/Mock)
 ├── App.tsx                 # Main app with async stats loading
 ├── types.ts                # TypeScript types (includes structureUrl)
 ├── constants.ts            # Static data (TIMELINE_EVENTS only)
@@ -61,7 +61,8 @@ npm install
 Create `.env.local` in project root:
 ```
 VITE_API_URL=http://localhost:8000
-GEMINI_API_KEY=your_gemini_api_key_here
+VITE_GEMINI_API_KEY=your_gemini_api_key_here        # Optional: For AI predictions
+VITE_PRIVATE_MODEL_URL=https://your-model.com/api   # Optional: Custom model endpoint
 ```
 
 **3. Backend Setup:**
@@ -82,7 +83,7 @@ python3 -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```bash
 # From project root
 npm run dev
-# Starts Vite dev server (usually http://localhost:3000)
+# Starts Vite dev server at http://localhost:3000
 ```
 
 **Note:** Both backend and frontend must be running. Frontend fetches data from backend API.
@@ -173,28 +174,40 @@ onSelectEnzyme: (enzyme: Enzyme) => void
 
 ### AI Integration
 
-[services/geminiService.ts](services/geminiService.ts) handles Gemini AI integration:
-- Uses `@google/genai` package
-- API key injected via Vite's `define` config (process.env.API_KEY)
-- Function: `analyzeProteinSequence(sequence: string)` - analyzes protein sequences for plastic-degrading properties
+[services/predictionService.ts](services/predictionService.ts) provides protein sequence analysis with 3-tier fallback:
+
+1. **Private Model API** (Priority 1): Custom inference endpoint via `VITE_PRIVATE_MODEL_URL`
+2. **Google Gemini AI** (Priority 2): Uses `@google/genai` package with `VITE_GEMINI_API_KEY`
+3. **Mock Mode** (Priority 3): Simulation with deterministic predictions when no API is configured
+
+**Key Features:**
+- Lazy initialization prevents crashes when API keys are missing
+- Automatic fallback cascade if higher-priority services fail
+- Returns structured `PredictionResult` with enzyme family, substrate, confidence, and source
+- Function: `predictPlasticDegradation(sequence: string)` - Main prediction interface
+- Legacy function: `analyzeProteinSequence()` available for backward compatibility
 
 ### Environment Variables
 
 **.env.local (frontend):**
-```typescript
-VITE_API_URL=http://localhost:8000  // Backend API URL
-GEMINI_API_KEY=your_key_here        // For Predictor.tsx AI analysis
+```bash
+VITE_API_URL=http://localhost:8000           # Backend API URL (required)
+VITE_GEMINI_API_KEY=your_key_here            # For Gemini AI predictions (optional)
+VITE_PRIVATE_MODEL_URL=https://your-model... # Custom model endpoint (optional)
 ```
 
 Vite config exposes these via `import.meta.env`:
 - `import.meta.env.VITE_API_URL` - Used in [databaseService.ts](services/api/databaseService.ts)
-- `import.meta.env.VITE_GEMINI_API_KEY` - Injected as `process.env.GEMINI_API_KEY` via `define` config
+- `import.meta.env.VITE_GEMINI_API_KEY` - Used in [predictionService.ts](services/predictionService.ts) for Gemini AI
+- `import.meta.env.VITE_PRIVATE_MODEL_URL` - Optional custom model endpoint
 
 **Path Alias:** `@/` resolves to project root ([vite.config.ts](vite.config.ts), [tsconfig.json](tsconfig.json))
 ```typescript
 import { Enzyme } from '@/types';
 import { getEnzymes } from '@/services/api/databaseService';
 ```
+
+**Nightingale Components:** The app uses [@nightingale-elements](https://ebi-webcomponents.github.io/nightingale/) web components for protein sequence visualization (requires TypeScript declarations in [custom-elements.d.ts](custom-elements.d.ts)).
 
 ## Component Organization
 
@@ -204,7 +217,7 @@ import { getEnzymes } from '@/services/api/databaseService';
 - [components/EnzymeDetail.tsx](components/EnzymeDetail.tsx) - 3D structure viewer with S3 support. Handles 3 structure sources: S3 custom URL → PDB ID → AlphaFold prediction
 
 **AI/Analysis Components:**
-- [components/Predictor.tsx](components/Predictor.tsx) - Gemini AI sequence analysis (unchanged, uses [geminiService.ts](services/geminiService.ts))
+- [components/Predictor.tsx](components/Predictor.tsx) - Multi-model AI sequence analysis (uses [predictionService.ts](services/predictionService.ts))
 - [components/Blast.tsx](components/Blast.tsx) - BLAST alignment interface
 - [components/Phylogeny.tsx](components/Phylogeny.tsx) - Phylogenetic analysis
 
@@ -221,8 +234,10 @@ Core types in [types.ts](types.ts):
 - `Enzyme` - Main data structure with `structureUrl?: string` for S3 PDB files
 - `PlasticType` - Enum for substrates (PET, PE, PP, PS, PUR, PLA, PHB)
 - `StructureSource` - Type alias: `'pdb' | 's3' | 'alphafold'`
-- `AnalysisResult` - Gemini AI output
+- `AnalysisResult` - Legacy AI output type
 - `TimelineEvent` - Static timeline events
+
+**Note:** [predictionService.ts](services/predictionService.ts) defines its own `PredictionResult` interface with fields: `enzymeFamily`, `substrate`, `confidence`, `rawAnalysis`, `source`.
 
 **Service Layer Types:**
 ```typescript
@@ -307,6 +322,33 @@ useEffect(() => {
     fetchData();
 }, [dependencies]);
 ```
+
+### AI Prediction Pattern
+
+The prediction service handles sequence analysis with automatic fallback:
+
+```typescript
+import { predictPlasticDegradation } from '@/services/predictionService';
+
+const analyzeSequence = async (sequence: string) => {
+    try {
+        const result = await predictPlasticDegradation(sequence);
+        console.log(result.enzymeFamily);   // "Cutinase-like Esterase"
+        console.log(result.substrate);      // "PET, Polyurethane"
+        console.log(result.confidence);     // 85
+        console.log(result.source);         // 'private-model' | 'gemini' | 'mock'
+    } catch (error) {
+        console.error('Prediction failed:', error);
+    }
+};
+```
+
+**Service tries in order:**
+1. Private Model API (if `VITE_PRIVATE_MODEL_URL` is set)
+2. Google Gemini (if `VITE_GEMINI_API_KEY` is set)
+3. Mock Mode (always available, shows console warning)
+
+**No configuration needed** - the service works in mock mode by default for development.
 
 ### Structure Visualization Priority
 
