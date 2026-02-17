@@ -69,6 +69,7 @@ def create_schema(conn):
         CREATE TABLE IF NOT EXISTS enzymes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             protein_id TEXT UNIQUE NOT NULL,
+            plz_id TEXT,
             accession TEXT,
             enzyme_name TEXT,
             ec_number TEXT,
@@ -130,6 +131,7 @@ def create_schema(conn):
     # Create indexes for performance
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_enzymes_accession ON enzymes(accession)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_enzymes_protein_id ON enzymes(protein_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_enzymes_plz_id ON enzymes(plz_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_enzymes_organism ON enzymes(host_organism)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_identifiers_enzyme ON identifiers(enzyme_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_identifiers_type_value ON identifiers(identifier_type, identifier_value)')
@@ -227,8 +229,9 @@ def validate_sequence(sequence):
     """Basic sequence validation (amino acid alphabet)"""
     if not sequence:
         return False
-    # Allow standard amino acids
-    valid_chars = set('ACDEFGHIKLMNPQRSTVWY')
+    # Allow standard amino acids + ambiguous codes (B, J, O, U, X, Z)
+    # These are valid IUPAC codes for ambiguous amino acids
+    valid_chars = set('ACDEFGHIKLMNPQRSTVWYBJOUXZ')
     return all(c in valid_chars for c in sequence.upper())
 
 
@@ -266,14 +269,15 @@ def import_csv(csv_path, db_path):
                 # Insert enzyme record
                 cursor.execute('''
                     INSERT INTO enzymes (
-                        protein_id, accession, enzyme_name, ec_number,
+                        protein_id, plz_id, accession, enzyme_name, ec_number,
                         gene_name, host_organism, taxonomy, sequence,
                         sequence_length, reference, source_name,
                         sequence_source, structure_source, ec_number_source,
                         predicted_ec_number, ec_prediction_source, structure_url
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (
                     row['protein_id'],
+                    row.get('PLZ_ID') or None,
                     primary_accession,
                     row.get('enzyme_name') or None,
                     row.get('ec_number') or None,

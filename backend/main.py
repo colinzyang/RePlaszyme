@@ -42,6 +42,7 @@ DB_PATH = Path(__file__).parent.parent / "plaszyme.db"
 class EnzymeResponse(BaseModel):
     id: str  # Plaszyme ID (e.g., X0001, X0031)
     plaszymeId: str  # Explicit Plaszyme ID for clarity
+    plzId: Optional[str]  # PLZ_ID hash identifier
     accession: str  # External database accession (GenBank/UniProt)
     genbankId: Optional[str]  # Primary GenBank ID
     uniprotId: Optional[str]  # Primary UniProt ID
@@ -88,11 +89,11 @@ def row_to_enzyme(row: sqlite3.Row, cursor: sqlite3.Cursor) -> EnzymeResponse:
     enzyme_id = row['id']
     plaszyme_id = row['protein_id']
 
-    # Fetch plastic substrates (major types only)
+    # Fetch plastic substrates (all types)
     cursor.execute('''
         SELECT substrate_code
         FROM plastic_substrates
-        WHERE enzyme_id = ? AND substrate_category = 'major'
+        WHERE enzyme_id = ?
         ORDER BY substrate_code
     ''', (enzyme_id,))
     plastic_types = [r[0] for r in cursor.fetchall()]
@@ -130,6 +131,7 @@ def row_to_enzyme(row: sqlite3.Row, cursor: sqlite3.Cursor) -> EnzymeResponse:
     return EnzymeResponse(
         id=plaszyme_id,
         plaszymeId=plaszyme_id,
+        plzId=row['plz_id'],
         accession=row['accession'] or plaszyme_id,
         genbankId=genbank_id,
         uniprotId=uniprot_id,

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { analyzeProteinSequence } from '@/services/predictionService';
-import { PlasticType } from '../types';
+import { ALL_SUBSTRATE_TYPES } from '../types';
 
 const Blast: React.FC = () => {
     const [sequence, setSequence] = useState('');
@@ -112,7 +112,7 @@ const Blast: React.FC = () => {
                                         className="bg-white border border-slate-200 rounded-lg text-xs py-2 px-2 focus:border-accent outline-none text-slate-700"
                                      >
                                         <option value="">All Types</option>
-                                        {Object.values(PlasticType).map(t => (
+                                        {ALL_SUBSTRATE_TYPES.map(t => (
                                             <option key={t} value={t}>{t}</option>
                                         ))}
                                     </select>

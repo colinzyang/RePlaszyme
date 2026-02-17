@@ -1,16 +1,18 @@
-import { Enzyme, PlasticType, TimelineEvent } from './types';
+import { Enzyme, TimelineEvent } from './types';
 
 export const TEXTURE_URL = "https://www.transparenttextures.com/patterns/cubes.png";
 
+// Note: PLASZYME_DATA is deprecated - data now comes from backend API
 export const PLASZYME_DATA: Enzyme[] = [
     {
         id: "enz_001",
+        plaszymeId: "enz_001",
         accession: "A0A0K8P6T7",
         name: "IsPETase",
         ecNumber: "3.1.1.101",
         organism: "Ideonella sakaiensis",
         taxonomy: "Bacteria; Proteobacteria; Betaproteobacteria; Burkholderiales",
-        plasticType: [PlasticType.PET],
+        plasticType: ['PET'],
         length: 290,
         weight: "31.5",
         temperature: "30-40°C",
@@ -21,12 +23,13 @@ export const PLASZYME_DATA: Enzyme[] = [
     },
     {
         id: "enz_002",
+        plaszymeId: "enz_002",
         accession: "A0A1F5",
         name: "LCC (Leaf-branch compost cutinase)",
         ecNumber: "3.1.1.74",
         organism: "Uncultured bacterium",
         taxonomy: "Bacteria; Environmental samples",
-        plasticType: [PlasticType.PET, PlasticType.PLA],
+        plasticType: ['PET', 'PLA'],
         length: 293,
         weight: "32.1",
         temperature: "50-70°C",
@@ -37,12 +40,13 @@ export const PLASZYME_DATA: Enzyme[] = [
     },
     {
         id: "enz_003",
+        plaszymeId: "enz_003",
         accession: "Q9Z4P9",
         name: "TfCut2",
         ecNumber: "3.1.1.74",
         organism: "Thermobifida fusca",
         taxonomy: "Bacteria; Actinobacteria; Actinomycetales",
-        plasticType: [PlasticType.PET],
+        plasticType: ['PET'],
         length: 262,
         weight: "28.5",
         temperature: "50-60°C",
@@ -53,12 +57,13 @@ export const PLASZYME_DATA: Enzyme[] = [
     },
     {
         id: "enz_004",
+        plaszymeId: "enz_004",
         accession: "P12345",
         name: "PUE-1",
         ecNumber: "3.5.1.-",
         organism: "Pseudomonas chlororaphis",
         taxonomy: "Bacteria; Proteobacteria; Gammaproteobacteria",
-        plasticType: [PlasticType.PUR],
+        plasticType: ['PUR'],
         length: 450,
         weight: "48.2",
         temperature: "30°C",
@@ -68,12 +73,13 @@ export const PLASZYME_DATA: Enzyme[] = [
     },
     {
         id: "enz_005",
+        plaszymeId: "enz_005",
         accession: "G5G6H7",
         name: "Alk B2",
         ecNumber: "1.14.15.3",
         organism: "Pseudomonas putida",
         taxonomy: "Bacteria; Proteobacteria; Gammaproteobacteria",
-        plasticType: [PlasticType.PE, PlasticType.PP],
+        plasticType: ['PE', 'PP'],
         length: 405,
         weight: "45.0",
         temperature: "25-35°C",

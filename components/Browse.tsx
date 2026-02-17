@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getEnzymes, exportAllEnzymes } from '@/services/api/databaseService';
-import { Enzyme, PlasticType } from '../types';
+import { Enzyme, PlasticType, ALL_SUBSTRATE_TYPES } from '../types';
 
 interface BrowseProps {
     onSelectEnzyme: (enzyme: Enzyme) => void;
@@ -181,9 +181,9 @@ const Browse: React.FC<BrowseProps> = ({ onSelectEnzyme }) => {
                                 <span className={`material-symbols-outlined text-slate-400 text-base transition-transform duration-300 ${isFilterExpanded ? 'rotate-180' : ''}`}>expand_more</span>
                             </button>
                             
-                            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isFilterExpanded ? 'max-h-[600px] opacity-100 pt-4' : 'max-h-0 opacity-0'}`}>
-                                <div className="space-y-2 mb-4">
-                                    {Object.values(PlasticType).map((type) => (
+                            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isFilterExpanded ? 'max-h-[800px] opacity-100 pt-4' : 'max-h-0 opacity-0'}`}>
+                                <div className="space-y-2 mb-4 max-h-[400px] overflow-y-auto pr-2">
+                                    {ALL_SUBSTRATE_TYPES.map((type) => (
                                         <label key={type} className="flex items-center gap-2 cursor-pointer group py-1">
                                             <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center transition-colors ${selectedPlastics.includes(type) ? 'bg-accent border-accent' : 'border-slate-300 bg-white'}`}>
                                                 {selectedPlastics.includes(type) && <span className="material-symbols-outlined text-[10px] text-white">check</span>}
