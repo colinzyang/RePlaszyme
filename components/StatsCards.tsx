@@ -14,10 +14,14 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats, isLoading = false }) => 
     return (
         <section className="grid grid-cols-1 md:grid-cols-4 gap-4 w-full">
             {/* Enzymes Count */}
-            <div className="col-span-1 glass-panel rounded-3xl p-6 flex flex-col justify-center gap-4 relative overflow-hidden border-white/50 group">
-                 <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <div className="col-span-1 glass-panel rounded-3xl p-6 flex flex-col justify-center gap-4 relative overflow-hidden border-white/50 group hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-100/50 transition-all duration-300">
+                {/* Subtle top accent line */}
+                <div className="absolute top-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-blue-300/50 to-transparent" />
+                {/* Inner glow on hover */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br from-blue-50/30 to-transparent pointer-events-none" />
+                <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                     <span className="material-symbols-outlined text-6xl text-blue-600">genetics</span>
-                 </div>
+                </div>
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center border border-blue-100 text-blue-600">
                         <span className="material-symbols-outlined">science</span>
@@ -33,10 +37,12 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats, isLoading = false }) => 
             </div>
 
              {/* Plastic Substrates */}
-             <div className="col-span-1 glass-panel rounded-3xl p-6 flex flex-col justify-center gap-4 relative overflow-hidden border-white/50 group">
-                 <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+             <div className="col-span-1 glass-panel rounded-3xl p-6 flex flex-col justify-center gap-4 relative overflow-hidden border-white/50 group hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-100/50 transition-all duration-300">
+                <div className="absolute top-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-emerald-300/50 to-transparent" />
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br from-emerald-50/30 to-transparent pointer-events-none" />
+                <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                     <span className="material-symbols-outlined text-6xl text-emerald-600">recycling</span>
-                 </div>
+                </div>
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center border border-emerald-100 text-emerald-600">
                         <span className="material-symbols-outlined">layers</span>
@@ -52,10 +58,12 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats, isLoading = false }) => 
             </div>
 
             {/* Structures */}
-            <div className="col-span-1 glass-panel rounded-3xl p-6 flex flex-col justify-center gap-4 relative overflow-hidden border-white/50 group">
+            <div className="col-span-1 glass-panel rounded-3xl p-6 flex flex-col justify-center gap-4 relative overflow-hidden border-white/50 group hover:-translate-y-0.5 hover:shadow-lg hover:shadow-amber-100/50 transition-all duration-300">
+                <div className="absolute top-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-amber-300/50 to-transparent" />
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br from-amber-50/30 to-transparent pointer-events-none" />
                 <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                     <span className="material-symbols-outlined text-6xl text-amber-600">view_in_ar</span>
-                 </div>
+                </div>
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center border border-amber-100 text-amber-600">
                         <span className="material-symbols-outlined">hub</span>
@@ -71,10 +79,12 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats, isLoading = false }) => 
             </div>
 
             {/* Organisms */}
-             <div className="col-span-1 glass-panel rounded-3xl p-6 flex flex-col justify-center gap-4 relative overflow-hidden border-white/50 group">
-                 <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+             <div className="col-span-1 glass-panel rounded-3xl p-6 flex flex-col justify-center gap-4 relative overflow-hidden border-white/50 group hover:-translate-y-0.5 hover:shadow-lg hover:shadow-purple-100/50 transition-all duration-300">
+                <div className="absolute top-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-purple-300/50 to-transparent" />
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br from-purple-50/30 to-transparent pointer-events-none" />
+                <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                     <span className="material-symbols-outlined text-6xl text-purple-600">diversity_3</span>
-                 </div>
+                </div>
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center border border-purple-100 text-purple-600">
                         <span className="material-symbols-outlined">public</span>

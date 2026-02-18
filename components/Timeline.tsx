@@ -13,10 +13,14 @@ const getCategoryColor = (cat: string) => {
 
 const Timeline: React.FC = () => {
     return (
-        <section className="glass-panel rounded-3xl p-6 md:p-10 relative overflow-hidden">
-            
+        <section className="glass-panel rounded-3xl p-6 md:p-10 relative overflow-hidden group/section">
+            {/* Subtle top accent line */}
+            <div className="absolute top-0 left-10 right-10 h-px bg-gradient-to-r from-transparent via-slate-300/40 to-transparent" />
+            {/* Subtle inner glow */}
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-50/20 to-transparent pointer-events-none" />
+
             {/* Standardized Header */}
-            <header className="mb-8 border-b border-slate-200 pb-6">
+            <header className="relative mb-8 border-b border-slate-200 pb-6">
                 <div className="flex items-center gap-2 mb-1 text-accent">
                     <span className="material-symbols-outlined text-lg">history</span>
                     <span className="text-[10px] font-bold tracking-wider uppercase">Project History</span>
@@ -28,7 +32,9 @@ const Timeline: React.FC = () => {
             </header>
 
             {/* Inner Panel Style */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 md:p-8">
+            <div className="relative bg-white rounded-xl border border-slate-200 shadow-sm p-6 md:p-8 overflow-hidden">
+                {/* Subtle inner highlight */}
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-slate-100 to-transparent" />
                 <div className="relative border-l border-slate-200 ml-3 space-y-10">
                     {TIMELINE_EVENTS.map((event) => (
                         <div key={event.id} className="relative pl-8 group">

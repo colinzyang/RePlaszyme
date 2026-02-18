@@ -98,11 +98,19 @@ const App: React.FC = () => {
 
   return (
     <>
-      <div 
-        className="fixed inset-0 z-0 bg-mesh-gradient-light animated-mesh opacity-100 pointer-events-none" 
+      <div
+        className="fixed inset-0 z-0 bg-mesh-gradient-light animated-mesh opacity-100 pointer-events-none"
         data-alt="Abstract soft white and teal mesh gradient background"
       />
       <div className="fixed inset-0 z-0 bg-gradient-to-br from-emerald-50/40 via-transparent to-blue-50/40 pointer-events-none" />
+      {/* Subtle dot pattern overlay for depth */}
+      <div
+        className="fixed inset-0 z-[1] pointer-events-none opacity-[0.35]"
+        style={{
+          backgroundImage: `radial-gradient(circle at 1px 1px, rgba(14, 165, 233, 0.45) 1px, transparent 0)`,
+          backgroundSize: '28px 28px'
+        }}
+      />
       
       <Navbar currentPage={currentView} onNavigate={handleNavigate} />
       
