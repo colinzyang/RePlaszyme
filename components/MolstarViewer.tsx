@@ -14,9 +14,6 @@ interface MolstarViewerProps {
     height?: string;
 }
 
-// Track initialization state across all instances to prevent race conditions
-const initializingContainers = new Set<HTMLDivElement>();
-
 const MolstarViewer: React.FC<MolstarViewerProps> = ({
     pdbUrl,
     onResidueClick,
@@ -25,45 +22,102 @@ const MolstarViewer: React.FC<MolstarViewerProps> = ({
     onLoadError,
     height = '500px'
 }) => {
+    // Wrapper ref for the container
     const wrapperRef = useRef<HTMLDivElement>(null);
     const pluginRef = useRef<PluginContext | null>(null);
-    const containerRef = useRef<HTMLDivElement | null>(null);
+    // Track the actual container element that Molstar uses
+    const molstarContainerRef = useRef<HTMLDivElement | null>(null);
+    const isInitializing = useRef(false);
     const [isInitialized, setIsInitialized] = useState(false);
-    const initAttemptRef = useRef(0);
+
+    // Validate URL and fetch PDB data with better error handling
+    const fetchPdbData = async (url: string): Promise<string> => {
+        console.log('[MolstarViewer] Fetching PDB from:', url);
+
+        try {
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const text = await response.text();
+
+            // Basic validation - PDB files should start with HEADER, TITLE, ATOM, or similar
+            const trimmedText = text.trim();
+            const isPdbFormat = /^(HEADER|TITLE|ATOM|HETATM|REMARK|COMPND|SOURCE|KEYWDS|EXPDTA|AUTHOR|REVDAT|JRNL|DBREF|SEQRES|MODRES|HET|FORMUL|HELIX|SHEET|SSBOND|LINK|CISPEP|SITE|CRYST1|ORIGX1|ORIGX2|ORIGX3|SCALE1|SCALE2|SCALE3|MODEL|END)/m.test(trimmedText);
+
+            if (!isPdbFormat) {
+                // Check if it's an XML error (S3 returns XML errors)
+                if (trimmedText.startsWith('<?xml') || trimmedText.startsWith('<Error>')) {
+                    console.error('[MolstarViewer] Received XML error response:', trimmedText.substring(0, 500));
+                    throw new Error('PDB file not found (S3 returned error)');
+                }
+                console.error('[MolstarViewer] Invalid PDB format, first 200 chars:', trimmedText.substring(0, 200));
+                throw new Error('Invalid PDB file format');
+            }
+
+            console.log('[MolstarViewer] PDB data validated, size:', text.length, 'bytes');
+            return text;
+
+        } catch (error) {
+            if (error instanceof TypeError && error.message.includes('fetch')) {
+                console.error('[MolstarViewer] Network/CORS error:', error);
+                throw new Error('Network error or CORS blocked. Check if S3 bucket allows requests from this origin.');
+            }
+            throw error;
+        }
+    };
+
+    // Internal load function with better error handling
+    const loadStructureInternal = async (plugin: PluginContext, url: string) => {
+        try {
+            // First validate the URL and data
+            const pdbData = await fetchPdbData(url);
+
+            await plugin.clear();
+
+            // Use the raw data instead of letting Molstar fetch
+            const data = await plugin.builders.data.rawData({
+                data: pdbData,
+                label: url.split('/').pop() || 'structure.pdb'
+            }, { state: { isGhost: true } });
+
+            const trajectory = await plugin.builders.structure.parseTrajectory(data as any, 'pdb');
+            await plugin.builders.structure.hierarchy.applyPreset(trajectory, 'default');
+
+        } catch (error) {
+            console.error('[MolstarViewer] Failed to load structure:', error);
+            throw error;
+        }
+    };
 
     // Initialize Molstar plugin
     useEffect(() => {
-        if (!wrapperRef.current) return;
+        const wrapper = wrapperRef.current;
+        if (!wrapper) return;
 
-        // Skip if already initialized
-        if (pluginRef.current) return;
+        // Skip if already initialized or currently initializing
+        if (pluginRef.current || isInitializing.current) {
+            return;
+        }
 
-        const currentAttempt = ++initAttemptRef.current;
-        let cancelled = false;
+        isInitializing.current = true;
+        let disposed = false;
 
-        const initPlugin = async () => {
-            // Double-check after async boundary
-            if (cancelled || pluginRef.current) return;
+        const init = async () => {
+            // Check if disposed during async setup
+            if (disposed || !wrapper) return;
 
             // Create a fresh container element for Molstar
+            // This ensures we get a clean DOM element without any existing React roots
             const container = document.createElement('div');
             container.style.width = '100%';
             container.style.height = '100%';
             container.style.position = 'relative';
 
-            // Check if this container is already being initialized (StrictMode protection)
-            if (initializingContainers.has(container)) {
-                return;
-            }
-
-            // Append to wrapper
-            if (!wrapperRef.current || cancelled) {
-                return;
-            }
-
-            wrapperRef.current.appendChild(container);
-            containerRef.current = container;
-            initializingContainers.add(container);
+            wrapper.appendChild(container);
+            molstarContainerRef.current = container;
 
             try {
                 const plugin = await createPluginUI({
@@ -89,13 +143,14 @@ const MolstarViewer: React.FC<MolstarViewerProps> = ({
                     }
                 });
 
-                // Check if cancelled or a newer init attempt started
-                if (cancelled || initAttemptRef.current !== currentAttempt) {
+                // Check if disposed after async createPluginUI
+                if (disposed) {
                     plugin.dispose();
+                    // Clean up the container we created
                     if (container.parentNode) {
                         container.parentNode.removeChild(container);
                     }
-                    initializingContainers.delete(container);
+                    molstarContainerRef.current = null;
                     return;
                 }
 
@@ -126,64 +181,50 @@ const MolstarViewer: React.FC<MolstarViewerProps> = ({
                 // Load initial structure
                 await loadStructureInternal(plugin, pdbUrl);
 
-                if (!cancelled) {
+                if (!disposed) {
                     onLoadComplete?.();
                 }
 
             } catch (error) {
-                if (!cancelled) {
-                    console.error('Failed to initialize Molstar:', error);
-                    onLoadError?.(error instanceof Error ? error.message : 'Failed to initialize viewer');
+                if (!disposed) {
+                    console.error('[MolstarViewer] Failed to initialize:', error);
+                    const errorMessage = error instanceof Error ? error.message : 'Failed to initialize viewer';
+                    onLoadError?.(errorMessage);
                 }
-                initializingContainers.delete(container);
+                // Clean up container on error
+                if (container.parentNode) {
+                    container.parentNode.removeChild(container);
+                }
+                molstarContainerRef.current = null;
+            } finally {
+                isInitializing.current = false;
             }
         };
 
-        // Delay initialization slightly to allow StrictMode cleanup to complete
-        const timeoutId = setTimeout(() => {
-            initPlugin();
-        }, 0);
+        init();
 
         // Cleanup
         return () => {
-            cancelled = true;
-            clearTimeout(timeoutId);
+            disposed = true;
 
+            // Dispose the plugin first
             if (pluginRef.current) {
                 pluginRef.current.dispose();
                 pluginRef.current = null;
             }
-            setIsInitialized(false);
 
-            // Remove the container element entirely
-            if (containerRef.current) {
-                initializingContainers.delete(containerRef.current);
-                if (containerRef.current.parentNode) {
-                    containerRef.current.parentNode.removeChild(containerRef.current);
+            // Remove the container element entirely to clean up any React roots
+            if (molstarContainerRef.current) {
+                if (molstarContainerRef.current.parentNode) {
+                    molstarContainerRef.current.parentNode.removeChild(molstarContainerRef.current);
                 }
-                containerRef.current = null;
+                molstarContainerRef.current = null;
             }
+
+            setIsInitialized(false);
+            isInitializing.current = false;
         };
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-    // Internal load function
-    const loadStructureInternal = async (plugin: PluginContext, url: string) => {
-        try {
-            await plugin.clear();
-
-            const data = await plugin.builders.data.download({
-                url,
-                isBinary: false
-            }, { state: { isGhost: true } });
-
-            const trajectory = await plugin.builders.structure.parseTrajectory(data as any, 'pdb');
-            await plugin.builders.structure.hierarchy.applyPreset(trajectory, 'default');
-
-        } catch (error) {
-            console.error('Failed to load structure:', error);
-            throw error;
-        }
-    };
 
     // Load structure from URL (public API)
     const loadStructure = useCallback(async (url: string) => {
@@ -220,7 +261,7 @@ const MolstarViewer: React.FC<MolstarViewerProps> = ({
             if (!canvas) return null;
             return canvas.toDataURL('image/png');
         } catch (error) {
-            console.error('Failed to export screenshot:', error);
+            console.error('[MolstarViewer] Failed to export screenshot:', error);
             return null;
         }
     }, []);
