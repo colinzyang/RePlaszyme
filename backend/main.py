@@ -76,6 +76,17 @@ class DatabaseStats(BaseModel):
     substrates: int
 
 
+class DatabaseMetadata(BaseModel):
+    dbName: str
+    dbVersion: str
+    dbLicense: str
+    dbLicenseUrl: str
+    dataSource: str
+    createdAt: str
+    totalEnzymes: str
+    description: str
+
+
 # Database connection helper
 def get_db():
     """Get database connection with row factory"""
@@ -155,12 +166,16 @@ def row_to_enzyme(row: sqlite3.Row, cursor: sqlite3.Cursor) -> EnzymeResponse:
 def read_root():
     """Root endpoint"""
     return {
-        "message": "PlaszymeDB API",
+        "message": "RePlaszyme API",
         "version": "1.0.0",
+        "license": "MIT",
+        "license_url": "https://opensource.org/licenses/MIT",
         "endpoints": {
             "enzymes": "/api/enzymes",
             "enzyme_by_id": "/api/enzymes/{protein_id}",
+            "export": "/api/enzymes/export",
             "stats": "/api/stats",
+            "metadata": "/api/metadata",
             "docs": "/docs"
         }
     }
@@ -349,6 +364,35 @@ def get_database_stats():
         totalOrganisms=total_organisms,
         totalStructures=total_structures,
         substrates=substrates
+    )
+
+
+@app.get("/api/metadata", response_model=DatabaseMetadata)
+def get_database_metadata():
+    """
+    Get database metadata including license information
+
+    Returns database version, license (MIT), and other metadata
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Get all metadata from db_metadata table
+    cursor.execute('SELECT key, value FROM db_metadata')
+    metadata_rows = cursor.fetchall()
+
+    metadata = {row[0]: row[1] for row in metadata_rows}
+    conn.close()
+
+    return DatabaseMetadata(
+        dbName=metadata.get('db_name', 'RePlaszyme'),
+        dbVersion=metadata.get('db_version', '1.1'),
+        dbLicense=metadata.get('db_license', 'MIT'),
+        dbLicenseUrl=metadata.get('db_license_url', 'https://opensource.org/licenses/MIT'),
+        dataSource=metadata.get('data_source', 'PlaszymeDB_v1.1.csv'),
+        createdAt=metadata.get('created_at', ''),
+        totalEnzymes=metadata.get('total_enzymes', '474'),
+        description=metadata.get('description', '')
     )
 
 

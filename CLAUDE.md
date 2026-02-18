@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**PlaszymeDB** is a full-stack web application for plastic-degrading enzymes with AI-powered sequence analysis and 3D structure visualization. The architecture consists of:
+**RePlaszyme** is a full-stack web application for plastic-degrading enzymes with AI-powered sequence analysis and 3D structure visualization. The architecture consists of:
 
 - **Frontend**: React + TypeScript (Vite) with custom view-based navigation
 - **Backend**: FastAPI (Python) REST API with SQLite database
-- **Data**: 472 enzymes from PlaszymeDB_v1.1.csv with normalized relational schema
+- **Data**: 474 enzymes from PlaszymeDB_v1.1.csv with normalized relational schema
 - **AI Integration**: Google Gemini for protein sequence analysis
 
 **Project Structure:** Flat file structure (no `src/` directory). Components in `./components/`, services in `./services/`, backend in `./backend/`, with main files in project root.
@@ -17,10 +17,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```
 RePlaszyme/
-├── backend/                 # FastAPI backend
+├── backend/                # FastAPI backend
 │   ├── main.py             # REST API endpoints
 │   └── requirements.txt    # Python dependencies
-├── components/              # React components
+├── components/             # React components
 │   ├── Browse.tsx          # Enzyme browsing (async data from API)
 │   ├── EnzymeDetail.tsx    # Enzyme details with 3D structure
 │   ├── Predictor.tsx       # Gemini AI sequence analysis
@@ -37,7 +37,7 @@ RePlaszyme/
 ├── constants.ts            # Static data (TIMELINE_EVENTS only)
 ├── init_db.py              # Database initialization script
 ├── plaszyme.db             # SQLite database (gitignored)
-├── PlaszymeDB_v1.1.csv    # Raw enzyme data (474 enzymes)
+├── PlaszymeDB_v1.1.csv     # Raw enzyme data (474 enzymes)
 ├── .env.local              # API URL & Gemini key (gitignored)
 └── vite.config.ts          # Vite config with @/ alias
 ```
@@ -50,7 +50,7 @@ RePlaszyme/
 ```bash
 python3 init_db.py
 # Creates plaszyme.db from PlaszymeDB_v1.1.csv
-# Imports 472 enzymes into normalized SQLite schema
+# Imports 474 enzymes into normalized SQLite schema
 ```
 
 **2. Frontend Setup:**
@@ -109,22 +109,24 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 ┌─────────────────────────────────────────┐
 │  React Frontend (Vite)                  │
-│  - Browse.tsx: Async enzyme fetching   │
-│  - App.tsx: Stats loading              │
-│  - databaseService.ts: API client      │
+│  - Browse.tsx: Async enzyme fetching    │
+│  - App.tsx: Stats loading               │
+│  - databaseService.ts: API client       │
 └──────────────┬──────────────────────────┘
                │ HTTP REST API
                │ (fetch calls)
 ┌──────────────▼──────────────────────────┐
 │  FastAPI Backend (Python)               │
-│  GET /api/enzymes (pagination/filters) │
+│  GET /api/enzymes (pagination/filters)  │
 │  GET /api/enzymes/{id}                  │
+│  GET /api/enzymes/export                │
 │  GET /api/stats                         │
+│  GET /api/metadata (license info)        │
 └──────────────┬──────────────────────────┘
                │ SQLite queries
 ┌──────────────▼──────────────────────────┐
 │  SQLite Database (plaszyme.db)          │
-│  - enzymes (472 records)                │
+│  - enzymes (474 records)                │
 │  - identifiers (GenBank, PDB, UniProt)  │
 │  - plastic_substrates (junction table)  │
 └─────────────────────────────────────────┘
@@ -165,7 +167,7 @@ onSelectEnzyme: (enzyme: Enzyme) => void
 
 **Frontend Service Layer:**
 - [services/api/databaseService.ts](services/api/databaseService.ts) - TypeScript API client
-- Functions: `getEnzymes()`, `getEnzymeById()`, `getDatabaseStats()`
+- Functions: `getEnzymes()`, `getEnzymeById()`, `getDatabaseStats()`, `exportAllEnzymes()`
 - Returns typed `PaginatedResult<Enzyme>` and `DatabaseStats`
 
 **Static Data:**
@@ -215,6 +217,7 @@ import { getEnzymes } from '@/services/api/databaseService';
 - [components/Browse.tsx](components/Browse.tsx) - Async enzyme browsing with server-side pagination, filtering (by plastic type), and search. Uses `getEnzymes()` from databaseService
 - [components/StatsCards.tsx](components/StatsCards.tsx) - Displays real database stats from `getDatabaseStats()`. Props: `stats`, `isLoading`
 - [components/EnzymeDetail.tsx](components/EnzymeDetail.tsx) - 3D structure viewer with S3 support. Handles 3 structure sources: S3 custom URL → PDB ID → AlphaFold prediction
+  - **Important**: Uses `key={enzyme.plaszymeId}` on MolstarViewer to force remount when switching enzymes
 
 **AI/Analysis Components:**
 - [components/Predictor.tsx](components/Predictor.tsx) - Multi-model AI sequence analysis (uses [predictionService.ts](services/predictionService.ts))
@@ -274,13 +277,15 @@ interface DatabaseStats {
 2. Re-run `python3 init_db.py` (deletes and recreates database)
 3. Restart backend server
 
-**Do not** modify [constants.ts](constants.ts) `PLASZYME_DATA` - it's no longer used for enzyme data.
+**Do not** modify [constants.ts](constants.ts) `PLASZYME_DATA` - it's deprecated and only contains sample data.
 
 ### Backend API Patterns
 
 **Query parameters:**
 ```python
 # GET /api/enzymes?page=1&limit=10&search=PETase&plastic_types=PET&plastic_types=PE
+# GET /api/enzymes/export?search=PETase&plastic_types=PET  # Returns all matches (no pagination)
+# GET /api/metadata  # Returns database metadata including MIT license
 ```
 
 **Adding new endpoints:**
@@ -356,6 +361,8 @@ const analyzeSequence = async (sequence: string) => {
 1. **S3 Custom Structure**: If `enzyme.structureUrl` exists, load via `custom-data-url`
 2. **PDB Structure**: If `enzyme.pdbId` exists, load via `molecule-id`
 3. **AlphaFold Prediction**: Use `enzyme.accession` with `alphafold-view="true"`
+
+**Important**: When rendering MolstarViewer with enzyme switching, always include `key={enzyme.plaszymeId}` to force remount and prevent state pollution between different enzyme structures.
 
 ### Navigation Flow
 

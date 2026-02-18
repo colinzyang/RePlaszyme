@@ -128,6 +128,15 @@ def create_schema(conn):
         )
     ''')
 
+    # Database metadata table (includes license information)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS db_metadata (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
     # Create indexes for performance
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_enzymes_accession ON enzymes(accession)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_enzymes_protein_id ON enzymes(protein_id)')
@@ -141,6 +150,30 @@ def create_schema(conn):
 
     conn.commit()
     print("✓ Database schema created successfully")
+
+
+def populate_db_metadata(conn):
+    """Populate database metadata including license information"""
+    from datetime import datetime
+
+    metadata = [
+        ('db_name', 'RePlaszyme'),
+        ('db_version', '1.1'),
+        ('db_license', 'MIT'),
+        ('db_license_url', 'https://opensource.org/licenses/MIT'),
+        ('data_source', 'PlaszymeDB_v1.1.csv'),
+        ('created_at', datetime.now().isoformat()),
+        ('total_enzymes', '474'),
+        ('description', 'Comprehensive database of plastic-degrading enzymes with sequence, structure, and substrate information'),
+    ]
+
+    cursor = conn.cursor()
+    cursor.executemany(
+        'INSERT OR REPLACE INTO db_metadata (key, value, updated_at) VALUES (?, ?, ?)',
+        [(k, v, datetime.now().isoformat()) for k, v in metadata]
+    )
+    conn.commit()
+    print(f"✓ Populated database metadata with {len(metadata)} entries")
 
 
 def populate_substrate_types(conn):
@@ -241,6 +274,7 @@ def import_csv(csv_path, db_path):
 
     # Create schema and populate reference data
     create_schema(conn)
+    populate_db_metadata(conn)
     populate_substrate_types(conn)
 
     cursor = conn.cursor()
