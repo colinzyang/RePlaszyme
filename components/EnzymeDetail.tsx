@@ -7,19 +7,6 @@ interface EnzymeDetailProps {
     onBack: () => void;
 }
 
-const getSubstrateImage = (type: string) => {
-    switch(type) {
-        case 'PET': return "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Polyethylenterephthalat.svg/320px-Polyethylenterephthalat.svg.png";
-        case 'PE': return "https://upload.wikimedia.org/wikipedia/commons/thumb/6/62/Polyethylene-repeat-2D.svg/320px-Polyethylene-repeat-2D.svg.png";
-        case 'PP': return "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Polypropylen_Kettensegment.svg/320px-Polypropylen_Kettensegment.svg.png";
-        case 'PS': return "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Polystyrene.svg/320px-Polystyrene.svg.png";
-        case 'PUR': return "https://upload.wikimedia.org/wikipedia/commons/thumb/0/07/Polyurethane.svg/320px-Polyurethane.svg.png";
-        case 'PLA': return "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Polylactic_acid.svg/320px-Polylactic_acid.svg.png";
-        case 'PHB': return "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Polyhydroxybutyrate.svg/320px-Polyhydroxybutyrate.svg.png";
-        default: return "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Polyethylenterephthalat.svg/320px-Polyethylenterephthalat.svg.png";
-    }
-};
-
 const EnzymeDetail: React.FC<EnzymeDetailProps> = ({ enzyme, onBack }) => {
 
     // Refs for interaction logic
@@ -194,9 +181,10 @@ const EnzymeDetail: React.FC<EnzymeDetailProps> = ({ enzyme, onBack }) => {
                                     </div>
                                 )}
 
-                                {/* Molstar Viewer */}
+                                {/* Molstar Viewer - key forces remount on enzyme change */}
                                 <div ref={molstarContainerRef} className="w-full h-full">
                                     <MolstarViewer
+                                        key={enzyme.plaszymeId}
                                         pdbUrl={structureConfig.url}
                                         onResidueHover={handleResidueHover}
                                         onResidueClick={handleResidueClick}
@@ -269,12 +257,13 @@ const EnzymeDetail: React.FC<EnzymeDetailProps> = ({ enzyme, onBack }) => {
                             <div className="p-6 flex flex-col items-center">
                                 {enzyme.plasticType.length > 0 ? (
                                     <>
-                                        <div className="w-full h-32 flex items-center justify-center mb-4 bg-white">
-                                            <img
-                                                src={getSubstrateImage(enzyme.plasticType[0])}
-                                                alt={`${enzyme.plasticType[0]} structure`}
-                                                className="max-w-full max-h-full object-contain opacity-80"
-                                            />
+                                        <div className="w-full h-32 flex flex-col items-center justify-center mb-4 bg-slate-50 rounded-lg border border-slate-100 relative">
+                                            <span className="material-symbols-outlined text-slate-300 text-3xl mb-1">science</span>
+                                            <p className="text-[10px] text-slate-400 font-medium">Substrate Structure</p>
+                                            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-1 bg-amber-50 rounded-full border border-amber-200">
+                                                <span className="material-symbols-outlined text-amber-500 text-[10px]">schedule</span>
+                                                <span className="text-[8px] text-amber-600 font-medium">Coming Soon</span>
+                                            </div>
                                         </div>
                                         <div className="flex flex-wrap gap-2 justify-center w-full">
                                             {enzyme.plasticType.map(pt => (
