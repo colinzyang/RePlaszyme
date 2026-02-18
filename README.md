@@ -1,7 +1,3 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
-
 # RePlaszyme
 
 A full-stack web application for plastic-degrading enzymes with AI-powered sequence analysis and 3D structure visualization.
@@ -16,7 +12,7 @@ RePlaszyme is a comprehensive database and analysis platform for plastic-degradi
 
 - **474 Enzymes**: Curated from PlaszymeDB_v1.1 with complete sequence and structural data
 - **3D Structure Visualization**: Interactive Molstar viewer with support for PDB, S3, and AlphaFold structures
-- **AI-Powered Analysis**: Multi-model protein sequence analysis (Gemini AI with fallback)
+- **AI-Powered Analysis**: Multi-model protein sequence analysis with fallback
 - **Advanced Filtering**: Search and filter enzymes by plastic type, organism, and more
 - **Real-time Statistics**: Live database statistics fetched from backend API
 
@@ -25,7 +21,7 @@ RePlaszyme is a comprehensive database and analysis platform for plastic-degradi
 - **Frontend**: React 19.2.4 + TypeScript + Vite 6.2.0
 - **Backend**: FastAPI (Python) + SQLite
 - **Visualization**: Molstar 5.6.1 (3D structures) + Nightingale Elements (sequence view)
-- **AI Integration**: Google Gemini AI with multi-model fallback
+- **AI Integration**: Multi-model AI prediction with fallback
 - **Styling**: Tailwind CSS 4.1.18
 
 ## Prerequisites
@@ -64,7 +60,6 @@ Create `.env.local` in the project root:
 
 ```bash
 VITE_API_URL=http://localhost:8000
-VITE_GEMINI_API_KEY=your_gemini_api_key_here        # Optional: For AI predictions
 VITE_PRIVATE_MODEL_URL=https://your-model.com/api   # Optional: Custom model endpoint
 ```
 
@@ -155,7 +150,7 @@ Returns database name, version, license (MIT), and other metadata.
 
 ### AI Prediction
 - Multi-model protein sequence analysis
-- Automatic fallback (Private Model → Gemini → Mock)
+- Automatic fallback (Private Model → Mock)
 - Enzyme family and substrate prediction
 - Confidence scoring
 
