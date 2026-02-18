@@ -91,8 +91,28 @@ export const PLASZYME_DATA: Enzyme[] = [
 ];
 
 export const TIMELINE_EVENTS: TimelineEvent[] = [
-    { id: 1, date: "2023-10-15", title: "Database version 2.4 released", category: "Update" },
-    { id: 2, date: "2023-10-01", title: "Added 50 new PET-degrading sequences", category: "New Data" },
-    { id: 3, date: "2023-09-20", title: "Integrated AlphaFold predicted structures", category: "Update" },
-    { id: 4, date: "2023-09-05", title: "Server maintenance scheduled", category: "Maintenance" },
+    {
+        id: 1,
+        date: "2026-02-19",
+        title: "RePlaszyme v1.1 database initialized with 474 curated enzymes",
+        category: "New Data"
+    },
+    {
+        id: 2,
+        date: "2026-02-19",
+        title: "Integrated 34 plastic substrate types (major & minor polymers)",
+        category: "Update"
+    },
+    {
+        id: 3,
+        date: "2026-02-19",
+        title: "Added 474 AlphaFold predicted 3D structures",
+        category: "New Data"
+    },
+    {
+        id: 4,
+        date: "2026-02-19",
+        title: "Collected enzymes from 214+ microbial species",
+        category: "Update"
+    },
 ];

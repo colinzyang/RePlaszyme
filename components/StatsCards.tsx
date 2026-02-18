@@ -16,11 +16,11 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats, isLoading = false }) => 
             {/* Enzymes Count */}
             <div className="col-span-1 glass-panel rounded-3xl p-6 flex flex-col justify-center gap-4 relative overflow-hidden border-white/50 group">
                  <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <span className="material-symbols-outlined text-6xl text-blue-600">biotech</span>
+                    <span className="material-symbols-outlined text-6xl text-blue-600">genetics</span>
                  </div>
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center border border-blue-100 text-blue-600">
-                        <span className="material-symbols-outlined">dataset</span>
+                        <span className="material-symbols-outlined">science</span>
                     </div>
                     <h3 className="text-primary text-sm font-medium">Total Enzymes</h3>
                 </div>
@@ -32,14 +32,14 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats, isLoading = false }) => 
                 </div>
             </div>
 
-             {/* Plastic Types */}
+             {/* Plastic Substrates */}
              <div className="col-span-1 glass-panel rounded-3xl p-6 flex flex-col justify-center gap-4 relative overflow-hidden border-white/50 group">
                  <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                     <span className="material-symbols-outlined text-6xl text-emerald-600">recycling</span>
                  </div>
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center border border-emerald-100 text-emerald-600">
-                        <span className="material-symbols-outlined">category</span>
+                        <span className="material-symbols-outlined">layers</span>
                     </div>
                     <h3 className="text-primary text-sm font-medium">Substrates</h3>
                 </div>
@@ -47,7 +47,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats, isLoading = false }) => 
                     <p className="text-2xl font-light text-primary">
                         {isLoading ? '—' : (stats?.substrates || '—')}
                     </p>
-                    <p className="text-slate-500 text-[10px]">Types (PET, PE, PUR...)</p>
+                    <p className="text-slate-500 text-[10px]">Plastic polymer types</p>
                 </div>
             </div>
 
@@ -58,7 +58,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats, isLoading = false }) => 
                  </div>
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center border border-amber-100 text-amber-600">
-                        <span className="material-symbols-outlined">deployed_code</span>
+                        <span className="material-symbols-outlined">hub</span>
                     </div>
                     <h3 className="text-primary text-sm font-medium">Structures</h3>
                 </div>
@@ -66,18 +66,18 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats, isLoading = false }) => 
                     <p className="text-2xl font-light text-primary">
                         {isLoading ? '—' : (stats?.totalStructures || '—')}
                     </p>
-                    <p className="text-slate-500 text-[10px]">PDB & AlphaFold Models</p>
+                    <p className="text-slate-500 text-[10px]">Predicted 3D models</p>
                 </div>
             </div>
 
             {/* Organisms */}
              <div className="col-span-1 glass-panel rounded-3xl p-6 flex flex-col justify-center gap-4 relative overflow-hidden border-white/50 group">
                  <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <span className="material-symbols-outlined text-6xl text-purple-600">bug_report</span>
+                    <span className="material-symbols-outlined text-6xl text-purple-600">diversity_3</span>
                  </div>
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center border border-purple-100 text-purple-600">
-                        <span className="material-symbols-outlined">pets</span>
+                        <span className="material-symbols-outlined">public</span>
                     </div>
                     <h3 className="text-primary text-sm font-medium">Sources</h3>
                 </div>
@@ -85,7 +85,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats, isLoading = false }) => 
                     <p className="text-2xl font-light text-primary">
                         {isLoading ? '—' : (stats?.totalOrganisms ? `${stats.totalOrganisms}+` : '—')}
                     </p>
-                    <p className="text-slate-500 text-[10px]">Species recorded</p>
+                    <p className="text-slate-500 text-[10px]">Organisms recorded</p>
                 </div>
             </div>
         </section>

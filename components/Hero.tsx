@@ -1,22 +1,16 @@
 import React, { useState } from 'react';
-import { analyzeProteinSequence } from '@/services/predictionService';
 
-const Hero: React.FC = () => {
+interface HeroProps {
+    onSearch: (term: string) => void;
+    onNavigate: (view: string) => void;
+}
+
+const Hero: React.FC<HeroProps> = ({ onSearch, onNavigate }) => {
     const [inputValue, setInputValue] = useState('');
-    const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [analysisResult, setAnalysisResult] = useState<string | null>(null);
 
-    const handleSearch = async () => {
+    const handleSearch = () => {
         if (!inputValue.trim()) return;
-        
-        setIsAnalyzing(true);
-        setAnalysisResult(null);
-        
-        // In a real app this would search the DB, here we use Gemini to "Analyze" the query intent or sequence
-        const result = await analyzeProteinSequence(inputValue);
-        
-        setAnalysisResult(result);
-        setIsAnalyzing(false);
+        onSearch(inputValue);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -55,9 +49,16 @@ const Hero: React.FC = () => {
                         <div className="absolute -left-20 -top-20 w-40 h-40 bg-accent/10 rounded-full blur-3xl pointer-events-none"></div>
                         
                         <p className="relative text-sm text-slate-500 font-light leading-relaxed text-left max-w-md">
-                            A curated resource for enzymatic plastic degradation. 
+                            A curated resource for enzymatic plastic degradation.
                             Explore sequences, structures, and phylogenetic relationships in a high-quality integrated environment.
                         </p>
+                        <button
+                            onClick={() => onNavigate('about')}
+                            className="relative mt-4 text-xs font-medium text-accent hover:text-accent-glow transition-colors flex items-center gap-1 group"
+                        >
+                            <span>Explore more</span>
+                            <span className="material-symbols-outlined text-sm transition-transform group-hover:translate-x-1">arrow_forward</span>
+                        </button>
                      </div>
                 </div>
 
@@ -79,34 +80,14 @@ const Hero: React.FC = () => {
                                 onKeyDown={handleKeyDown}
                             />
                         </div>
-                        <button 
+                        <button
                             onClick={handleSearch}
-                            disabled={isAnalyzing}
-                            className="w-full md:w-auto h-12 md:h-14 px-8 rounded-full bg-accent hover:bg-accent-glow text-white font-medium text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-accent/20 hover:shadow-accent/40 disabled:opacity-70 disabled:cursor-not-allowed my-1 md:my-0 md:mr-1"
+                            className="w-full md:w-auto h-12 md:h-14 px-8 rounded-full bg-accent hover:bg-accent-glow text-white font-medium text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-accent/20 hover:shadow-accent/40 my-1 md:my-0 md:mr-1"
                         >
-                            {isAnalyzing ? (
-                                <span className="animate-spin material-symbols-outlined text-sm">progress_activity</span>
-                            ) : (
-                                <span>Search</span>
-                            )}
+                            <span>Search</span>
                         </button>
                     </div>
                 </div>
-
-                {/* AI Result */}
-                {analysisResult && (
-                    <div className="w-full max-w-4xl mt-4 animate-fade-in-up px-2">
-                        <div className="glass-panel rounded-2xl p-6 border-t-4 border-accent shadow-xl">
-                            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                                <span className="material-symbols-outlined text-lg text-accent">smart_toy</span>
-                                AI Analysis Result
-                            </h3>
-                            <div className="text-xs text-slate-700 leading-relaxed font-mono">
-                                    <div dangerouslySetInnerHTML={{ __html: analysisResult.replace(/\n/g, '<br/>').replace(/\*\*(.*?)\*\*/g, '<span class="font-bold text-primary">$1</span>') }} />
-                            </div>
-                        </div>
-                    </div>
-                )}
             </div>
         </section>
     );

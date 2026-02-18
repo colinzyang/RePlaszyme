@@ -23,6 +23,7 @@ const App: React.FC = () => {
   const [dbStats, setDbStats] = useState<DatabaseStats | null>(null);
   const [isStatsLoading, setIsStatsLoading] = useState(true);
   const [statsError, setStatsError] = useState<string | null>(null);
+  const [initialSearchTerm, setInitialSearchTerm] = useState('');
 
   // Load database statistics on mount
   useEffect(() => {
@@ -58,19 +59,25 @@ const App: React.FC = () => {
       window.scrollTo(0, 0);
   };
 
+  const handleSearchFromHome = (term: string) => {
+      setInitialSearchTerm(term);
+      setCurrentView('browse');
+      window.scrollTo(0, 0);
+  };
+
   const renderContent = () => {
       switch (currentView) {
           case 'home':
               return (
                   <div className="flex flex-col gap-16 animate-fade-in-up">
-                      <Hero />
+                      <Hero onSearch={handleSearchFromHome} onNavigate={handleNavigate} />
                       {statsError && <ErrorMessage message={statsError} />}
                       <StatsCards stats={dbStats} isLoading={isStatsLoading} />
                       <Timeline />
                   </div>
               );
           case 'browse':
-              return <Browse onSelectEnzyme={handleSelectEnzyme} />;
+              return <Browse onSelectEnzyme={handleSelectEnzyme} initialSearchTerm={initialSearchTerm} />;
           case 'predictor':
               return <Predictor />;
           case 'blast':

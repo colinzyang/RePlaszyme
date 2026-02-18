@@ -349,12 +349,12 @@ def get_database_stats():
     cursor.execute('SELECT COUNT(DISTINCT host_organism) FROM enzymes WHERE host_organism IS NOT NULL')
     total_organisms = cursor.fetchone()[0]
 
-    # Total structures (PDB IDs)
-    cursor.execute('SELECT COUNT(*) FROM identifiers WHERE identifier_type = "pdb"')
+    # Total structures (S3 predicted structure URLs)
+    cursor.execute('SELECT COUNT(*) FROM enzymes WHERE structure_url IS NOT NULL')
     total_structures = cursor.fetchone()[0]
 
-    # Total substrate types
-    cursor.execute('SELECT COUNT(DISTINCT substrate_code) FROM plastic_substrates WHERE substrate_category = "major"')
+    # Total substrate types (all categories, not just major)
+    cursor.execute('SELECT COUNT(DISTINCT substrate_code) FROM plastic_substrates')
     substrates = cursor.fetchone()[0]
 
     conn.close()

@@ -4,9 +4,10 @@ import { Enzyme, PlasticType, ALL_SUBSTRATE_TYPES } from '../types';
 
 interface BrowseProps {
     onSelectEnzyme: (enzyme: Enzyme) => void;
+    initialSearchTerm?: string;
 }
 
-const Browse: React.FC<BrowseProps> = ({ onSelectEnzyme }) => {
+const Browse: React.FC<BrowseProps> = ({ onSelectEnzyme, initialSearchTerm }) => {
     // State for async data
     const [enzymes, setEnzymes] = useState<Enzyme[]>([]);
     const [totalCount, setTotalCount] = useState(0);
@@ -24,6 +25,14 @@ const Browse: React.FC<BrowseProps> = ({ onSelectEnzyme }) => {
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
+
+    // Sync initialSearchTerm from parent (e.g., Hero search)
+    useEffect(() => {
+        if (initialSearchTerm !== undefined && initialSearchTerm !== searchTerm) {
+            setSearchTerm(initialSearchTerm);
+            setCurrentPage(1);
+        }
+    }, [initialSearchTerm]);
 
     // Fetch data when filters, search, or pagination changes
     useEffect(() => {
