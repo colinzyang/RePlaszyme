@@ -5,10 +5,14 @@ Provides REST API for enzyme database with filtering, search, and pagination
 
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
 import sqlite3
 from pathlib import Path
+import time
+
+# Import BLAST service
+from services.blast import BlastAligner, SequenceDatabase
 
 app = FastAPI(
     title="PlaszymeDB API",
@@ -85,6 +89,46 @@ class DatabaseMetadata(BaseModel):
     createdAt: str
     totalEnzymes: str
     description: str
+
+
+# BLAST API Models
+class BlastRequest(BaseModel):
+    """Request model for BLAST alignment"""
+    sequence: str = Field(..., description="Query protein sequence (FASTA or raw)")
+    max_results: int = Field(default=100, ge=1, le=500, description="Maximum results to return")
+    similarity_threshold: str = Field(default="30", description="Minimum percent identity threshold")
+    plastic_types: Optional[List[str]] = Field(default=None, description="Filter by plastic substrate types")
+    require_structure: bool = Field(default=False, description="Only include enzymes with known structures")
+
+
+class BlastQueryInfo(BaseModel):
+    """Information about the query sequence"""
+    length: int
+    sequence_preview: str
+
+
+class BlastHitResponse(BaseModel):
+    """Single BLAST alignment hit"""
+    plaszyme_id: str
+    accession: str
+    description: str
+    organism: str
+    plastic_types: List[str]
+    max_score: float
+    query_cover: float
+    e_value: float
+    percent_identity: float
+    alignment_length: int
+    has_structure: bool
+
+
+class BlastResponse(BaseModel):
+    """Response model for BLAST alignment"""
+    results: List[BlastHitResponse]
+    total: int = Field(description="Total sequences in database")
+    filtered: int = Field(description="Sequences matching filter criteria")
+    query_info: BlastQueryInfo
+    execution_time_ms: float
 
 
 # Database connection helper
@@ -416,6 +460,108 @@ def health_check():
             "status": "unhealthy",
             "error": str(e)
         }
+
+
+# Initialize BLAST aligner (lazy loaded)
+_blast_aligner: Optional[BlastAligner] = None
+
+
+def get_blast_aligner() -> BlastAligner:
+    """Get or create BLAST aligner instance"""
+    global _blast_aligner
+    if _blast_aligner is None:
+        db = SequenceDatabase(DB_PATH)
+        _blast_aligner = BlastAligner(db)
+    return _blast_aligner
+
+
+@app.post("/api/blast", response_model=BlastResponse)
+def blast_search(request: BlastRequest):
+    """
+    Perform local sequence alignment against PlaszymeDB
+
+    Uses Smith-Waterman local alignment with BLOSUM62 substitution matrix.
+
+    - **sequence**: Query protein sequence (FASTA format or raw amino acids)
+    - **max_results**: Maximum number of results to return (1-500)
+    - **similarity_threshold**: Minimum percent identity threshold (e.g., "30" for >30%)
+    - **plastic_types**: Filter database by plastic substrate types
+    - **require_structure**: Only include enzymes with known 3D structures
+    """
+    start_time = time.time()
+
+    try:
+        # Parse similarity threshold
+        try:
+            threshold = float(request.similarity_threshold)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid similarity_threshold: {request.similarity_threshold}"
+            )
+
+        # Get aligner
+        aligner = get_blast_aligner()
+
+        # Get query info
+        query_info = aligner.get_query_info(request.sequence)
+
+        if query_info['length'] == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid sequence: No valid amino acid characters found"
+            )
+
+        # Perform alignment
+        hits, total_count, filtered_count = aligner.align(
+            query_sequence=request.sequence,
+            plastic_types=request.plastic_types,
+            require_structure=request.require_structure,
+            max_results=request.max_results,
+            similarity_threshold=threshold
+        )
+
+        # Calculate execution time
+        execution_time_ms = (time.time() - start_time) * 1000
+
+        # Convert hits to response format
+        result_hits = [
+            BlastHitResponse(
+                plaszyme_id=hit.plaszyme_id,
+                accession=hit.accession,
+                description=hit.description,
+                organism=hit.organism,
+                plastic_types=hit.plastic_types,
+                max_score=hit.max_score,
+                query_cover=hit.query_cover,
+                e_value=hit.e_value,
+                percent_identity=hit.percent_identity,
+                alignment_length=hit.alignment_length,
+                has_structure=hit.has_structure
+            )
+            for hit in hits
+        ]
+
+        return BlastResponse(
+            results=result_hits,
+            total=total_count,
+            filtered=filtered_count,
+            query_info=BlastQueryInfo(
+                length=query_info['length'],
+                sequence_preview=query_info['sequence_preview']
+            ),
+            execution_time_ms=round(execution_time_ms, 2)
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"BLAST alignment failed: {str(e)}"
+        )
 
 
 if __name__ == "__main__":

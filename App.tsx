@@ -81,7 +81,7 @@ const App: React.FC = () => {
           case 'predictor':
               return <Predictor />;
           case 'blast':
-              return <Blast />;
+              return <Blast onSelectEnzyme={handleSelectEnzyme} />;
           case 'phylogeny':
               return <Phylogeny />;
           case 'detail':
@@ -107,7 +107,7 @@ const App: React.FC = () => {
       <div
         className="fixed inset-0 z-[1] pointer-events-none opacity-[0.35]"
         style={{
-          backgroundImage: `radial-gradient(circle at 1px 1px, rgba(14, 165, 233, 0.45) 1px, transparent 0)`,
+          backgroundImage: `radial-gradient(circle at 1px 1px, rgba(14, 165, 233, 0.45) 1px, transparent 0)`, // Light teal dots background
           backgroundSize: '28px 28px'
         }}
       />

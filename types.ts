@@ -62,3 +62,39 @@ export interface TimelineEvent {
 }
 
 export type StructureSource = 'pdb' | 's3' | 'alphafold';
+
+// BLAST API Types
+export interface BlastRequest {
+    sequence: string;
+    max_results?: number;
+    similarity_threshold?: string;
+    plastic_types?: string[];
+    require_structure?: boolean;
+}
+
+export interface BlastHit {
+    plaszyme_id: string;
+    accession: string;
+    description: string;
+    organism: string;
+    plastic_types: string[];
+    max_score: number;
+    query_cover: number;
+    e_value: number;
+    percent_identity: number;
+    alignment_length: number;
+    has_structure: boolean;
+}
+
+export interface BlastQueryInfo {
+    length: number;
+    sequence_preview: string;
+}
+
+export interface BlastResponse {
+    results: BlastHit[];
+    total: number;
+    filtered: number;
+    query_info: BlastQueryInfo;
+    execution_time_ms: number;
+}

@@ -3,7 +3,7 @@
  * Provides typed async API for enzyme data fetched from FastAPI backend
  */
 
-import { Enzyme, PlasticType } from '@/types';
+import { Enzyme, PlasticType, BlastRequest, BlastResponse } from '@/types';
 
 // API base URL - defaults to localhost for development
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -192,6 +192,56 @@ export async function getDatabaseStats(): Promise<DatabaseStats> {
             throw new Error(`Cannot connect to backend API at ${API_BASE_URL}. Please ensure:\n1. Backend server is running (python3 -m uvicorn main:app --reload)\n2. CORS is properly configured\n3. No firewall is blocking the connection`);
         }
         // Re-throw other errors
+        throw error;
+    }
+}
+
+/**
+ * Perform BLAST sequence alignment against the database
+ *
+ * @param request - BLAST request with sequence and parameters
+ * @returns BLAST response with alignment hits
+ * @throws Error if API request fails
+ */
+export async function blastSearch(request: BlastRequest): Promise<BlastResponse> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/blast`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                sequence: request.sequence,
+                max_results: request.max_results ?? 100,
+                similarity_threshold: request.similarity_threshold ?? '30',
+                plastic_types: request.plastic_types ?? null,
+                require_structure: request.require_structure ?? false,
+            }),
+        });
+
+        if (!response.ok) {
+            if (response.status === 0) {
+                throw new Error('Network error: Unable to reach backend API.');
+            }
+
+            // Try to get error detail from response
+            let errorDetail = response.statusText;
+            try {
+                const errorData = await response.json();
+                errorDetail = errorData.detail || errorDetail;
+            } catch {
+                // Ignore JSON parse errors
+            }
+
+            throw new Error(`API Error (${response.status}): ${errorDetail}`);
+        }
+
+        return response.json();
+    } catch (error) {
+        if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+            console.error('Network error details:', error);
+            throw new Error(`Cannot connect to backend API at ${API_BASE_URL}. Please check if the backend server is running.`);
+        }
         throw error;
     }
 }
