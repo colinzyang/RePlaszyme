@@ -19,8 +19,8 @@ const Browse: React.FC<BrowseProps> = ({ onSelectEnzyme, initialSearchTerm }) =>
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-    // UI State for filter accordion - Default closed
-    const [isFilterExpanded, setIsFilterExpanded] = useState(false);
+    // UI State for filter accordion - Default expanded
+    const [isFilterExpanded, setIsFilterExpanded] = useState(true);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
