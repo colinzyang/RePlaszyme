@@ -19,7 +19,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 RePlaszyme/
 ├── backend/                # FastAPI backend
 │   ├── main.py             # REST API endpoints
-│   └── requirements.txt    # Python dependencies
+│   ├── requirements.txt    # Python dependencies
+│   └── services/
+│       └── blast/          # BLAST alignment service
+│           ├── __init__.py
+│           ├── aligner.py  # Smith-Waterman with BLOSUM62
+│           └── database.py # Sequence database loader
 ├── components/             # React components
 │   ├── Browse.tsx          # Enzyme browsing (async data from API)
 │   ├── EnzymeDetail.tsx    # Enzyme details with 3D structure
@@ -120,8 +125,10 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 │  GET /api/enzymes (pagination/filters)  │
 │  GET /api/enzymes/{id}                  │
 │  GET /api/enzymes/export                │
+│  POST /api/blast (sequence alignment)   │
 │  GET /api/stats                         │
-│  GET /api/metadata (license info)        │
+│  GET /api/metadata (license info)       │
+│  GET /health                            │
 └──────────────┬──────────────────────────┘
                │ SQLite queries
 ┌──────────────▼──────────────────────────┐
@@ -167,8 +174,8 @@ onSelectEnzyme: (enzyme: Enzyme) => void
 
 **Frontend Service Layer:**
 - [services/api/databaseService.ts](services/api/databaseService.ts) - TypeScript API client
-- Functions: `getEnzymes()`, `getEnzymeById()`, `getDatabaseStats()`, `exportAllEnzymes()`
-- Returns typed `PaginatedResult<Enzyme>` and `DatabaseStats`
+- Functions: `getEnzymes()`, `getEnzymeById()`, `getDatabaseStats()`, `exportAllEnzymes()`, `blastSearch()`
+- Returns typed `PaginatedResult<Enzyme>`, `DatabaseStats`, and `BlastResponse`
 
 **Static Data:**
 - [constants.ts](constants.ts) - Only contains `TIMELINE_EVENTS` (not enzyme data)
@@ -221,7 +228,7 @@ import { getEnzymes } from '@/services/api/databaseService';
 
 **AI/Analysis Components:**
 - [components/Predictor.tsx](components/Predictor.tsx) - Multi-model AI sequence analysis (uses [predictionService.ts](services/predictionService.ts))
-- [components/Blast.tsx](components/Blast.tsx) - BLAST alignment interface
+- [components/Blast.tsx](components/Blast.tsx) - BLAST alignment interface with configurable parameters (max_results, similarity_threshold, plastic_types filter)
 - [components/Phylogeny.tsx](components/Phylogeny.tsx) - Phylogenetic analysis
 
 **UI Components:**
@@ -235,10 +242,15 @@ import { getEnzymes } from '@/services/api/databaseService';
 
 Core types in [types.ts](types.ts):
 - `Enzyme` - Main data structure with `structureUrl?: string` for S3 PDB files
-- `PlasticType` - Enum for substrates (PET, PE, PP, PS, PUR, PLA, PHB)
+- `PlasticType` - Union type for 35 substrate types (7 major + 28 minor)
+  - Major: `PET | PE | PP | PS | PUR | PLA | PHB`
+  - Minor: `ECOFLEX | PBAT | PBS | PCL | PHBV | PVA` and 23 others
 - `StructureSource` - Type alias: `'pdb' | 's3' | 'alphafold'`
 - `AnalysisResult` - Legacy AI output type
 - `TimelineEvent` - Static timeline events
+- `BlastRequest` - BLAST API request (sequence, max_results, similarity_threshold, etc.)
+- `BlastHit` - Single alignment hit (plaszyme_id, score, e_value, percent_identity, etc.)
+- `BlastResponse` - BLAST API response (results, query_info, execution_time_ms)
 
 **Note:** [predictionService.ts](services/predictionService.ts) defines its own `PredictionResult` interface with fields: `enzymeFamily`, `substrate`, `confidence`, `rawAnalysis`, `source`.
 
@@ -286,7 +298,28 @@ interface DatabaseStats {
 # GET /api/enzymes?page=1&limit=10&search=PETase&plastic_types=PET&plastic_types=PE
 # GET /api/enzymes/export?search=PETase&plastic_types=PET  # Returns all matches (no pagination)
 # GET /api/metadata  # Returns database metadata including MIT license
+# GET /health  # Health check with database connection status
 ```
+
+**BLAST Alignment:**
+```python
+# POST /api/blast - Local sequence alignment
+# Request body:
+{
+    "sequence": "MNFPRASRLMQ...",  # Query sequence (FASTA or raw)
+    "max_results": 100,             # Max hits to return (1-500)
+    "similarity_threshold": "30",   # Min percent identity
+    "plastic_types": ["PET"],       # Optional filter by substrate
+    "require_structure": false      # Only enzymes with structures
+}
+# Returns: BlastResponse with hits, query info, and execution time
+```
+
+**BLAST Backend Service:**
+- `backend/services/blast/aligner.py` - `BlastAligner` class using BioPython's `PairwiseAligner`
+- Implements Smith-Waterman local alignment with BLOSUM62 substitution matrix
+- Gap penalties: open=-11, extend=-1 (standard for proteins)
+- E-value calculation using Karlin-Altschul statistics
 
 **Adding new endpoints:**
 1. Add Pydantic model in [backend/main.py](backend/main.py)
@@ -354,6 +387,38 @@ const analyzeSequence = async (sequence: string) => {
 3. Mock Mode (always available, shows console warning)
 
 **No configuration needed** - the service works in mock mode by default for development.
+
+### BLAST Search Pattern
+
+The BLAST service provides local sequence alignment against PlaszymeDB:
+
+```typescript
+import { blastSearch } from '@/services/api/databaseService';
+
+const runBlast = async (sequence: string) => {
+    try {
+        const response = await blastSearch({
+            sequence,
+            max_results: 100,
+            similarity_threshold: '30',
+            plastic_types: ['PET'],  // Optional filter
+            require_structure: false
+        });
+
+        console.log(response.results);        // Array of BlastHit
+        console.log(response.query_info);     // { length, sequence_preview }
+        console.log(response.execution_time_ms);
+    } catch (error) {
+        console.error('BLAST failed:', error);
+    }
+};
+```
+
+**Backend implementation:**
+- Uses BioPython's `PairwiseAligner` with Smith-Waterman algorithm
+- BLOSUM62 substitution matrix with gap penalties (-11 open, -1 extend)
+- E-value calculation using Karlin-Altschul statistics
+- Returns hits sorted by alignment score (descending)
 
 ### Structure Visualization Priority
 

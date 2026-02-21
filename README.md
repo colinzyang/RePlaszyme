@@ -1,46 +1,50 @@
 # RePlaszyme
 
-A full-stack web application for plastic-degrading enzymes with AI-powered sequence analysis and 3D structure visualization.
+A comprehensive database and analysis platform for plastic-degrading enzymes with AI-powered sequence analysis, BLAST alignment, and 3D structure visualization.
 
-## License
+## Features
 
-This project and its database are licensed under the [MIT License](LICENSE).
-
-## Overview
-
-RePlaszyme is a comprehensive database and analysis platform for plastic-degrading enzymes, featuring:
-
-- **474 Enzymes**: Curated from PlaszymeDB_v1.1 with complete sequence and structural data
-- **3D Structure Visualization**: Interactive Molstar viewer with support for PDB, S3, and AlphaFold structures
-- **AI-Powered Analysis**: Multi-model protein sequence analysis with fallback
-- **Advanced Filtering**: Search and filter enzymes by plastic type, organism, and more
-- **Real-time Statistics**: Live database statistics fetched from backend API
+- **Enzyme Database**: 474 curated plastic-degrading enzymes with complete sequence and structural data
+- **3D Structure Visualization**: Interactive Molstar viewer supporting PDB, S3 custom structures, and AlphaFold predictions
+- **BLAST Search**: Local Smith-Waterman sequence alignment with BLOSUM62 matrix
+- **AI-Powered Analysis**: Multi-model protein sequence analysis for enzyme classification
+- **Advanced Filtering**: Search and filter by plastic substrate type, organism, and more
+- **Real-time Statistics**: Live database statistics from REST API
 
 ## Tech Stack
 
-- **Frontend**: React 19.2.4 + TypeScript + Vite 6.2.0
-- **Backend**: FastAPI (Python) + SQLite
-- **Visualization**: Molstar 5.6.1 (3D structures) + Nightingale Elements (sequence view)
-- **AI Integration**: Multi-model AI prediction with fallback
-- **Styling**: Tailwind CSS 4.1.18
+| Layer | Technologies |
+|-------|-------------|
+| Frontend | React 19 + TypeScript + Vite 6 |
+| Backend | FastAPI (Python) + SQLite |
+| Visualization | Molstar (3D) + Nightingale Elements (sequence) |
+| AI | Google Gemini / Custom Model |
+| Styling | Tailwind CSS 4 |
 
 ## Prerequisites
 
-- Node.js (v18 or higher)
-- Python 3.8 or higher
-- pip3
+- **Node.js** v18 or higher
+- **Python** 3.8 or higher
+- **pip3**
 
-## Quick Start
+## Installation
 
-### 1. Database Initialization
+### Step 1: Clone the Repository
+
+```bash
+git clone https://github.com/your-username/RePlaszyme.git
+cd RePlaszyme
+```
+
+### Step 2: Initialize the Database
 
 ```bash
 python3 init_db.py
-# Creates plaszyme.db from PlaszymeDB_v1.1.csv
-# Imports 474 enzymes into normalized SQLite schema
 ```
 
-### 2. Backend Setup
+This creates `plaszyme.db` from `PlaszymeDB_v1.1.csv` and imports 474 enzymes into a normalized SQLite schema.
+
+### Step 3: Setup Backend
 
 ```bash
 cd backend
@@ -48,115 +52,137 @@ pip3 install -r requirements.txt
 python3 -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The backend will be available at `http://localhost:8000`
+The backend API will be available at `http://localhost:8000`.
 
-### 3. Frontend Setup
+### Step 4: Setup Frontend
 
 ```bash
+# From project root
 npm install
 ```
 
 Create `.env.local` in the project root:
 
 ```bash
+# Required
 VITE_API_URL=http://localhost:8000
-VITE_PRIVATE_MODEL_URL=https://your-model.com/api   # Optional: Custom model endpoint
+
+# Optional: AI Prediction
+VITE_GEMINI_API_KEY=your_gemini_api_key
+VITE_PRIVATE_MODEL_URL=https://your-model.com/api
 ```
 
-Run the frontend:
+Run the development server:
 
 ```bash
 npm run dev
 ```
 
-The frontend will be available at `http://localhost:3000`
+The frontend will be available at `http://localhost:3000`.
 
-**Note**: Both backend and frontend must be running for the app to work.
+> **Note**: Both backend and frontend must be running for the application to work.
+
+## Usage
+
+### Browse Enzymes
+
+Navigate to the **Browse** page to:
+- Search enzymes by name, organism, or accession number
+- Filter by plastic substrate type (PET, PE, PP, PS, PUR, PLA, PHB, etc.)
+- Export filtered results
+- Click on an enzyme to view details
+
+### View Enzyme Details
+
+Click on any enzyme to see:
+- Complete sequence and metadata
+- 3D structure visualization (Molstar)
+- External database links (GenBank, UniProt, PDB)
+- Optimal temperature and pH conditions
+
+### BLAST Search
+
+Navigate to the **BLAST** page to:
+1. Paste a protein sequence (FASTA or raw format)
+2. Configure search parameters:
+   - Maximum results (10-500)
+   - Similarity threshold (>30%, >50%, >70%, >90%)
+   - Filter by plastic substrate type
+   - Restrict to enzymes with known structures
+3. Run alignment to find homologous sequences
+4. Click on hits to view enzyme details
+
+### AI Prediction
+
+Navigate to the **Predictor** page to:
+1. Paste a protein sequence
+2. Get AI-powered predictions for:
+   - Enzyme family classification
+   - Plastic substrate specificity
+   - Confidence score
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/enzymes` | Paginated enzyme list with filtering |
+| GET | `/api/enzymes/{id}` | Single enzyme by protein ID |
+| GET | `/api/enzymes/export` | Export all matching enzymes |
+| POST | `/api/blast` | BLAST sequence alignment |
+| GET | `/api/stats` | Database statistics |
+| GET | `/api/metadata` | Database metadata and license |
+| GET | `/health` | Health check endpoint |
+
+### Example Requests
+
+**Search enzymes:**
+```bash
+curl "http://localhost:8000/api/enzymes?search=PETase&plastic_types=PET&limit=10"
+```
+
+**BLAST alignment:**
+```bash
+curl -X POST "http://localhost:8000/api/blast" \
+  -H "Content-Type: application/json" \
+  -d '{"sequence": "MNFPRASRLMQ...", "max_results": 100, "similarity_threshold": "30"}'
+```
 
 ## Project Structure
 
 ```
 RePlaszyme/
-├── backend/                 # FastAPI backend
-│   ├── main.py             # REST API endpoints
-│   └── requirements.txt    # Python dependencies
-├── components/              # React components
-│   ├── Browse.tsx          # Enzyme browsing with pagination
-│   ├── EnzymeDetail.tsx    # 3D structure viewer
-│   ├── Predictor.tsx       # AI sequence analysis
-│   ├── StatsCards.tsx      # Database statistics
-│   └── ...                 # Other UI components
+├── backend/
+│   ├── main.py                 # FastAPI REST API
+│   ├── requirements.txt        # Python dependencies
+│   └── services/
+│       └── blast/              # BLAST alignment service
+├── components/
+│   ├── Browse.tsx              # Enzyme browsing
+│   ├── Blast.tsx               # BLAST search interface
+│   ├── Predictor.tsx           # AI prediction
+│   ├── EnzymeDetail.tsx        # 3D structure viewer
+│   └── ...
 ├── services/
-│   ├── api/
-│   │   └── databaseService.ts   # API client for backend
-│   └── predictionService.ts     # Multi-model AI prediction
-├── App.tsx                 # Main app component
-├── types.ts                # TypeScript type definitions
-├── constants.ts            # Static data (timeline events)
-├── init_db.py              # Database initialization script
-├── PlaszymeDB_v1.1.csv    # Raw enzyme data
-└── vite.config.ts          # Vite configuration
+│   ├── api/databaseService.ts  # API client
+│   └── predictionService.ts    # AI prediction service
+├── App.tsx                     # Main application
+├── types.ts                    # TypeScript definitions
+├── init_db.py                  # Database initialization
+└── PlaszymeDB_v1.1.csv         # Raw enzyme data
 ```
 
-## API Endpoints
+## Database Schema
 
-### Get Enzymes (with pagination and filtering)
+| Table | Description |
+|-------|-------------|
+| `enzymes` | Core enzyme data (474 records) |
+| `identifiers` | External IDs (GenBank, PDB, UniProt) |
+| `plastic_substrates` | Enzyme-plastic relationships |
+| `substrate_types` | Reference data for substrates |
 
-```http
-GET /api/enzymes?page=1&limit=10&search=PETase&plastic_types=PET
-```
+## Production Deployment
 
-### Get Enzyme by ID
-
-```http
-GET /api/enzymes/{protein_id}
-```
-
-### Export Enzymes
-
-```http
-GET /api/enzymes/export?search=PETase&plastic_types=PET
-```
-
-### Get Database Statistics
-
-```http
-GET /api/stats
-```
-
-### Get Database Metadata (including license)
-
-```http
-GET /api/metadata
-```
-
-Returns database name, version, license (MIT), and other metadata.
-
-## Features
-
-### Browse Enzymes
-- Paginated enzyme listing with up to 100 items per page
-- Search by name, organism, or accession
-- Filter by plastic substrate type (PET, PE, PP, PS, PUR, PLA, PHB, and more)
-- Export filtered results
-
-### Enzyme Details
-- 3D structure visualization with multiple sources:
-  - S3 custom structures
-  - PDB entries
-  - AlphaFold predictions
-- Residue interaction tracking (hover/click)
-- Screenshot export functionality
-
-### AI Prediction
-- Multi-model protein sequence analysis
-- Automatic fallback (Private Model → Mock)
-- Enzyme family and substrate prediction
-- Confidence scoring
-
-## Development
-
-### Build for Production
+### Frontend Build
 
 ```bash
 npm run build
@@ -166,22 +192,20 @@ npm run preview
 ### Backend Production
 
 ```bash
+cd backend
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-## Database Schema
+## Development
 
-The database uses a normalized schema with four tables:
-
-- `enzymes` - Core enzyme data (474 records)
-- `identifiers` - External database IDs (GenBank, PDB, UniProt)
-- `plastic_substrates` - Many-to-many enzyme-plastic relationships
-- `substrate_types` - Reference data for plastic substrates
+For detailed development guidelines, architecture patterns, and coding conventions, see [CLAUDE.md](CLAUDE.md).
 
 ## License
 
-See LICENSE file for details.
+This project is licensed under the [MIT License](LICENSE).
 
-## Contributing
+## Acknowledgments
 
-Contributions are welcome! Please read CLAUDE.md for development guidelines.
+- Enzyme data sourced from PlaszymeDB v1.1
+- 3D structure visualization powered by [Molstar](https://molstar.org/)
+- Sequence visualization by [Nightingale Elements](https://ebi-webcomponents.github.io/nightingale/)
