@@ -15,6 +15,9 @@ interface PredictionResult {
     source?: 'private-model' | 'gemini' | 'mock';
 }
 
+// Set to false when ready to launch
+const IS_UNDER_DEVELOPMENT = true;
+
 const Predictor: React.FC = () => {
     const [sequence, setSequence] = useState('');
     const [jobStatus, setJobStatus] = useState<'idle' | 'queued' | 'processing' | 'completed'>('idle');
@@ -91,6 +94,19 @@ const Predictor: React.FC = () => {
     return (
         <div className="w-full mx-auto animate-fade-in-up pb-12">
             <div className="glass-panel rounded-3xl p-6 relative overflow-hidden">
+
+                {/* Under Development Overlay - Set IS_UNDER_DEVELOPMENT to false to disable */}
+                {IS_UNDER_DEVELOPMENT && (
+                    <div className="absolute inset-0 z-50 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center rounded-3xl">
+                        <div className="text-center px-8">
+                            <span className="material-symbols-outlined text-5xl text-slate-300 mb-4">code</span>
+                            <h2 className="text-xl md:text-2xl font-light text-primary mb-2">Under Development</h2>
+                            <p className="text-slate-400 text-sm max-w-sm mx-auto">
+                                Coming Soon
+                            </p>
+                        </div>
+                    </div>
+                )}
                 
                 {/* Header - More Compact */}
                 <header className="mb-6 border-b border-slate-200 pb-4 flex flex-col md:flex-row md:items-end justify-between gap-4">

@@ -5,8 +5,11 @@ export interface Enzyme {
     accession: string;  // External database accession (GenBank/UniProt)
     genbankId?: string;  // Primary GenBank ID from identifiers table
     uniprotId?: string;  // Primary UniProt ID from identifiers table
+    refseqId?: string;  // Primary RefSeq ID from identifiers table
+    geneName?: string;  // Gene name
     name: string;
     ecNumber: string;
+    predictedEcNumber?: string;  // Predicted EC number
     organism: string;
     taxonomy: string;
     plasticType: PlasticType[];
@@ -17,6 +20,11 @@ export interface Enzyme {
     pdbId?: string;  // Primary PDB ID from identifiers table
     sequence: string;
     reference: string;
+    sourceName?: string;  // Data source name
+    sequenceSource?: string;  // Sequence source
+    structureSource?: string;  // Structure source
+    ecNumberSource?: string;  // EC number source
+    ecPredictionSource?: string;  // EC prediction source
     structureUrl?: string;  // S3 URL for custom structures
 }
 

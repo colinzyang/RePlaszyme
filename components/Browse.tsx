@@ -22,6 +22,10 @@ const Browse: React.FC<BrowseProps> = ({ onSelectEnzyme, initialSearchTerm }) =>
     // UI State for filter accordion - Default expanded
     const [isFilterExpanded, setIsFilterExpanded] = useState(true);
 
+    // Export state
+    const [isExporting, setIsExporting] = useState(false);
+    const [exportMessage, setExportMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -106,6 +110,9 @@ const Browse: React.FC<BrowseProps> = ({ onSelectEnzyme, initialSearchTerm }) =>
     };
 
     const exportData = async () => {
+        setIsExporting(true);
+        setExportMessage(null);
+
         try {
             // Fetch ALL data matching current filters (not just current page)
             const allData = await exportAllEnzymes({
@@ -118,12 +125,63 @@ const Browse: React.FC<BrowseProps> = ({ onSelectEnzyme, initialSearchTerm }) =>
                 ? allData.filter(e => selectedIds.has(e.id))
                 : allData;
 
-            // Generate CSV with enriched data
-            const csvContent = "data:text/csv;charset=utf-8,"
-                + "Plaszyme ID,Name,Organism,Taxonomy,EC Number,Plastic Types,Sequence Length,GenBank ID,UniProt ID,PDB ID,Reference\n"
-                + dataToExport.map(e =>
-                    `${e.plaszymeId},"${e.name}","${e.organism}","${e.taxonomy}",${e.ecNumber},"${e.plasticType.join(';')}",${e.length},${e.genbankId || 'N/A'},${e.uniprotId || 'N/A'},${e.pdbId || 'N/A'},"${e.reference}"`
-                ).join("\n");
+            if (dataToExport.length === 0) {
+                setExportMessage({ type: 'error', text: 'No data to export. Please adjust your filters or selection.' });
+                return;
+            }
+
+            // Helper to escape CSV fields (wrap in quotes if contains comma, quote, or newline)
+            const escapeCSV = (value: string | undefined | null): string => {
+                if (value === undefined || value === null || value === '') return 'N/A';
+                const str = String(value);
+                if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+                    return `"${str.replace(/"/g, '""')}"`;
+                }
+                return str;
+            };
+
+            // Extended CSV headers with all available fields
+            const csvHeaders = [
+                "Plaszyme ID", "PLZ ID", "Accession", "Gene Name",
+                "Name", "Organism", "Taxonomy",
+                "EC Number", "Predicted EC Number",
+                "Plastic Types", "Sequence Length", "Weight (kDa)",
+                "Temperature", "pH",
+                "GenBank ID", "UniProt ID", "RefSeq ID", "PDB ID",
+                "Reference", "Source Name", "Sequence Source", "Structure Source",
+                "EC Number Source", "EC Prediction Source",
+                "Sequence"
+            ].join(",");
+
+            const csvRows = dataToExport.map(e => [
+                e.plaszymeId,
+                escapeCSV(e.plzId),
+                escapeCSV(e.accession),
+                escapeCSV(e.geneName),
+                escapeCSV(e.name),
+                escapeCSV(e.organism),
+                escapeCSV(e.taxonomy),
+                escapeCSV(e.ecNumber),
+                escapeCSV(e.predictedEcNumber),
+                escapeCSV(e.plasticType.join(';')),
+                e.length?.toString() || 'N/A',
+                escapeCSV(e.weight),
+                escapeCSV(e.temperature),
+                escapeCSV(e.ph),
+                escapeCSV(e.genbankId),
+                escapeCSV(e.uniprotId),
+                escapeCSV(e.refseqId),
+                escapeCSV(e.pdbId),
+                escapeCSV(e.reference),
+                escapeCSV(e.sourceName),
+                escapeCSV(e.sequenceSource),
+                escapeCSV(e.structureSource),
+                escapeCSV(e.ecNumberSource),
+                escapeCSV(e.ecPredictionSource),
+                escapeCSV(e.sequence)
+            ].join(","));
+
+            const csvContent = "data:text/csv;charset=utf-8," + csvHeaders + "\n" + csvRows.join("\n");
 
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement('a');
@@ -132,9 +190,22 @@ const Browse: React.FC<BrowseProps> = ({ onSelectEnzyme, initialSearchTerm }) =>
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+
+            setExportMessage({ type: 'success', text: `Successfully exported ${dataToExport.length} enzyme${dataToExport.length > 1 ? 's' : ''}.` });
+
+            // Clear success message after 3 seconds
+            setTimeout(() => setExportMessage(null), 3000);
         } catch (error) {
             console.error('Failed to export data:', error);
-            alert('Failed to export data. Please try again.');
+            const errorMsg = error instanceof Error
+                ? error.message
+                : 'Unknown error occurred';
+            setExportMessage({
+                type: 'error',
+                text: `Export failed: ${errorMsg}. Please ensure the backend API is running.`
+            });
+        } finally {
+            setIsExporting(false);
         }
     };
 
@@ -241,8 +312,8 @@ const Browse: React.FC<BrowseProps> = ({ onSelectEnzyme, initialSearchTerm }) =>
                             <div className="flex gap-3 items-center w-full sm:w-auto">
                                 <div className="flex items-center gap-2">
                                     <label className="text-[10px] text-slate-400 font-medium whitespace-nowrap">Rows:</label>
-                                    <select 
-                                        value={itemsPerPage} 
+                                    <select
+                                        value={itemsPerPage}
                                         onChange={handleLimitChange}
                                         className="bg-white border border-slate-200 text-slate-600 text-[10px] rounded-lg focus:ring-accent focus:border-accent block w-14 p-1 outline-none cursor-pointer"
                                     >
@@ -253,14 +324,32 @@ const Browse: React.FC<BrowseProps> = ({ onSelectEnzyme, initialSearchTerm }) =>
                                     </select>
                                 </div>
                                 <div className="h-5 w-px bg-slate-200 hidden sm:block"></div>
-                                <button 
+                                <button
                                     onClick={exportData}
-                                    className="px-3 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-medium text-slate-600 hover:bg-slate-50 hover:text-accent hover:border-accent transition-colors flex items-center gap-1.5 ml-auto sm:ml-0"
+                                    disabled={isExporting}
+                                    className={`px-3 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-medium text-slate-600 hover:bg-slate-50 hover:text-accent hover:border-accent transition-colors flex items-center gap-1.5 ml-auto sm:ml-0 ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
-                                    <span className="material-symbols-outlined text-sm">download</span> Export CSV
+                                    {isExporting ? (
+                                        <>
+                                            <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                                            Exporting...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="material-symbols-outlined text-sm">download</span> Export CSV
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         </div>
+
+                        {/* Export Message */}
+                        {exportMessage && (
+                            <div className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-medium ${exportMessage.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                                <span className="material-symbols-outlined text-sm">{exportMessage.type === 'success' ? 'check_circle' : 'error'}</span>
+                                {exportMessage.text}
+                            </div>
+                        )}
 
                         {/* Table - Inner Panel Style */}
                         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden min-h-[500px] flex flex-col shadow-sm">

@@ -50,8 +50,11 @@ class EnzymeResponse(BaseModel):
     accession: str  # External database accession (GenBank/UniProt)
     genbankId: Optional[str]  # Primary GenBank ID
     uniprotId: Optional[str]  # Primary UniProt ID
-    name: str
+    refseqId: Optional[str]  # Primary RefSeq ID
+    geneName: Optional[str]  # Gene name
+    name: str  # Enzyme name
     ecNumber: str
+    predictedEcNumber: Optional[str]  # Predicted EC number
     organism: str
     taxonomy: str
     plasticType: List[str]
@@ -62,6 +65,11 @@ class EnzymeResponse(BaseModel):
     pdbId: Optional[str]
     sequence: str
     reference: str
+    sourceName: Optional[str]  # Data source name
+    sequenceSource: Optional[str]  # Sequence source
+    structureSource: Optional[str]  # Structure source
+    ecNumberSource: Optional[str]  # EC number source
+    ecPredictionSource: Optional[str]  # EC prediction source
     structureUrl: Optional[str]
 
 
@@ -183,6 +191,16 @@ def row_to_enzyme(row: sqlite3.Row, cursor: sqlite3.Cursor) -> EnzymeResponse:
     uniprot_result = cursor.fetchone()
     uniprot_id = uniprot_result[0] if uniprot_result else None
 
+    # Fetch primary RefSeq ID
+    cursor.execute('''
+        SELECT identifier_value
+        FROM identifiers
+        WHERE enzyme_id = ? AND identifier_type = 'refseq'
+        LIMIT 1
+    ''', (enzyme_id,))
+    refseq_result = cursor.fetchone()
+    refseq_id = refseq_result[0] if refseq_result else None
+
     return EnzymeResponse(
         id=plaszyme_id,
         plaszymeId=plaszyme_id,
@@ -190,8 +208,11 @@ def row_to_enzyme(row: sqlite3.Row, cursor: sqlite3.Cursor) -> EnzymeResponse:
         accession=row['accession'] or plaszyme_id,
         genbankId=genbank_id,
         uniprotId=uniprot_id,
+        refseqId=refseq_id,
+        geneName=row['gene_name'],
         name=row['enzyme_name'] or 'Unknown',
         ecNumber=row['ec_number'] or row['predicted_ec_number'] or 'N/A',
+        predictedEcNumber=row['predicted_ec_number'],
         organism=row['host_organism'] or 'Unknown',
         taxonomy=row['taxonomy'] or '',
         plasticType=plastic_types,
@@ -202,6 +223,11 @@ def row_to_enzyme(row: sqlite3.Row, cursor: sqlite3.Cursor) -> EnzymeResponse:
         pdbId=pdb_id,
         sequence=row['sequence'],
         reference=row['reference'] or 'Unpublished',
+        sourceName=row['source_name'],
+        sequenceSource=row['sequence_source'],
+        structureSource=row['structure_source'],
+        ecNumberSource=row['ec_number_source'],
+        ecPredictionSource=row['ec_prediction_source'],
         structureUrl=row['structure_url']
     )
 
@@ -296,36 +322,13 @@ def get_enzymes(
     )
 
 
-@app.get("/api/enzymes/{protein_id}", response_model=EnzymeResponse)
-def get_enzyme_by_id(protein_id: str):
-    """
-    Get a single enzyme by its protein ID
-
-    - **protein_id**: The enzyme's protein ID (e.g., X0001)
-    """
-    conn = get_db()
-    cursor = conn.cursor()
-
-    cursor.execute('SELECT * FROM enzymes WHERE protein_id = ?', (protein_id,))
-    row = cursor.fetchone()
-
-    if not row:
-        conn.close()
-        raise HTTPException(status_code=404, detail=f"Enzyme {protein_id} not found")
-
-    enzyme = row_to_enzyme(row, cursor)
-    conn.close()
-
-    return enzyme
-
-
 @app.get("/api/enzymes/export")
 def export_all_enzymes(
     search: Optional[str] = Query(None, description="Search term"),
     plastic_types: Optional[List[str]] = Query(None, description="Filter by plastic types")
 ):
     """
-    Export all enzymes matching filters as CSV
+    Export all enzymes matching filters
 
     Returns complete dataset based on current filters
     """
@@ -373,6 +376,29 @@ def export_all_enzymes(
         "data": enzymes,
         "total": len(enzymes)
     }
+
+
+@app.get("/api/enzymes/{protein_id}", response_model=EnzymeResponse)
+def get_enzyme_by_id(protein_id: str):
+    """
+    Get a single enzyme by its protein ID
+
+    - **protein_id**: The enzyme's protein ID (e.g., X0001)
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT * FROM enzymes WHERE protein_id = ?', (protein_id,))
+    row = cursor.fetchone()
+
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail=f"Enzyme {protein_id} not found")
+
+    enzyme = row_to_enzyme(row, cursor)
+    conn.close()
+
+    return enzyme
 
 
 @app.get("/api/stats", response_model=DatabaseStats)

@@ -10,12 +10,9 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
         `text-sm font-medium transition-colors cursor-pointer ${currentPage === page ? 'text-primary relative after:absolute after:bottom-[-20px] after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-accent after:rounded-full' : 'text-slate-500 hover:text-primary'}`;
 
     const handleDownload = () => {
-        // Create a dummy CSV file for the whole database download simulation
-        const csvContent = "data:text/csv;charset=utf-8,Accession,Name,Organism,EC Number,Type\nA0A0K8P6T7,IsPETase,Ideonella sakaiensis,3.1.1.101,PET\nA0A1F5,LCC,Uncultured bacterium,3.1.1.74,PET;PLA\nQ9Z4P9,TfCut2,Thermobifida fusca,3.1.1.74,PET";
-        const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "PlaszymeDB_Full_v2.4.csv");
+        link.href = "/PlaszymeDB_v1.1.csv";
+        link.download = "PlaszymeDB_v1.1.csv";
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
