@@ -141,23 +141,37 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 
 ### Frontend: Single-Page Application
 
-The React app uses custom view-switching (no React Router):
+The React app uses custom hash-based routing (no React Router):
 
 - **View Types**: `home` | `browse` | `blast` | `phylogeny` | `predictor` | `about` | `detail`
-- **Navigation**: `handleNavigate()` in App.tsx updates `currentView` state
-- **Deep linking**: Not supported; refresh returns to home
+- **Navigation**: `handleNavigate()` in App.tsx updates `currentView` state and URL hash
+- **Deep linking**: Supported via hash URLs (e.g., `/#/detail/PLZY001`, `/#/browse?search=PETase`)
+- **Browser navigation**: Back/forward buttons work via `hashchange` event listener
+
+**URL Structure:**
+```
+/                   → Home (redirects to #/)
+/#/browse           → Browse Database
+/#/browse?search=PETase → Browse with search pre-filled
+/#/blast            → BLAST Search
+/#/phylogeny        → Phylogeny
+/#/predictor        → AI Predictor
+/#/about            → About
+/#/detail/{plaszymeId} → Enzyme Detail (loads enzyme from API)
+```
 
 ### Frontend State Management
 
 **App.tsx manages:**
-1. `currentView` - Which component renders
-2. `selectedEnzyme` - Enzyme for detail view
+1. `currentView` - Which component renders (synced with URL hash)
+2. `selectedEnzyme` - Enzyme for detail view (loaded from API for deep links)
 3. `dbStats` - Database statistics from API
 4. `isStatsLoading` / `statsError` - Loading states
+5. `isEnzymeLoading` - Loading state for enzyme detail deep links
 
 Components receive callbacks:
 ```typescript
-onNavigate: (view: string) => void
+onNavigate: (view: string, params?: { plaszymeId?: string; search?: string }) => void
 onSelectEnzyme: (enzyme: Enzyme) => void
 ```
 
@@ -431,10 +445,24 @@ const runBlast = async (sequence: string) => {
 
 ### Navigation Flow
 
-All navigation through App.tsx. To add a view:
+All navigation through App.tsx with hash-based URL sync:
+
+**Route mapping (App.tsx):**
+- `ROUTE_TO_VIEW` - Maps hash paths to view types
+- `VIEW_TO_ROUTE` - Maps view types to hash paths
+- `parseHash()` - Extracts view and params from URL hash
+- `buildHash()` - Constructs URL hash from view and params
+
+**Navigation handlers:**
+- `handleNavigate(view, params?)` - Updates URL hash and triggers view change
+- `handleSelectEnzyme(enzyme)` - Navigates to detail with plaszymeId in URL
+- `handleHashChange()` - Responds to browser back/forward via `hashchange` event
+
+To add a new view:
 1. Add to `View` type union in [App.tsx](App.tsx)
-2. Add case to `renderContent()` switch
-3. Update [Navbar.tsx](components/Navbar.tsx) and [Footer.tsx](components/Footer.tsx)
+2. Add route mappings to `ROUTE_TO_VIEW` and `VIEW_TO_ROUTE`
+3. Add case to `renderContent()` switch
+4. Update [Navbar.tsx](components/Navbar.tsx) and [Footer.tsx](components/Footer.tsx)
 
 ### Database Schema
 
