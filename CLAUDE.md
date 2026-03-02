@@ -28,11 +28,15 @@ RePlaszyme/
 ├── components/             # React components
 │   ├── Browse.tsx          # Enzyme browsing (async data from API)
 │   ├── EnzymeDetail.tsx    # Enzyme details with 3D structure
+│   ├── MolstarViewer.tsx   # Molstar 3D viewer wrapper (PDB loading, error handling)
+│   ├── Blast.tsx           # BLAST alignment interface
 │   ├── Predictor.tsx       # Gemini AI sequence analysis
 │   ├── StatsCards.tsx      # Real-time database statistics
 │   ├── LoadingSpinner.tsx  # Loading state UI
 │   ├── ErrorMessage.tsx    # Error state UI
 │   └── ...                 # Other view components
+├── public/
+│   └── PlaszymeDB_v1.1.csv # Static copy of enzyme data for deployment
 ├── services/
 │   ├── api/
 │   │   └── databaseService.ts   # API client for backend
@@ -239,6 +243,7 @@ import { getEnzymes } from '@/services/api/databaseService';
 - [components/StatsCards.tsx](components/StatsCards.tsx) - Displays real database stats from `getDatabaseStats()`. Props: `stats`, `isLoading`
 - [components/EnzymeDetail.tsx](components/EnzymeDetail.tsx) - 3D structure viewer with S3 support. Handles 3 structure sources: S3 custom URL → PDB ID → AlphaFold prediction
   - **Important**: Uses `key={enzyme.plaszymeId}` on MolstarViewer to force remount when switching enzymes
+- [components/MolstarViewer.tsx](components/MolstarViewer.tsx) - Molstar 3D viewer wrapper with PDB URL loading, error handling, and residue interaction callbacks. Props: `pdbUrl`, `onResidueClick`, `onResidueHover`, `onLoadComplete`, `onLoadError`
 
 **AI/Analysis Components:**
 - [components/Predictor.tsx](components/Predictor.tsx) - Multi-model AI sequence analysis (uses [predictionService.ts](services/predictionService.ts))
@@ -299,9 +304,10 @@ interface DatabaseStats {
 ### Adding New Enzymes
 
 **To add enzymes to the database:**
-1. Add rows to PlaszymeDB_v1.1.csv
-2. Re-run `python3 init_db.py` (deletes and recreates database)
-3. Restart backend server
+1. Add rows to PlaszymeDB_v1.1.csv (project root)
+2. Update `public/PlaszymeDB_v1.1.csv` to match (for deployed static access)
+3. Re-run `python3 init_db.py` (deletes and recreates database)
+4. Restart backend server
 
 **Do not** modify [constants.ts](constants.ts) `PLASZYME_DATA` - it's deprecated and only contains sample data.
 

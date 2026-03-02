@@ -24,6 +24,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        # Development origins
         "http://localhost:3000",   # Vite dev server (primary)
         "http://localhost:3001",   # Vite dev server (alternative)
         "http://localhost:3002",   # Vite dev server (alternative)
@@ -32,14 +33,20 @@ app.add_middleware(
         "http://127.0.0.1:3001",
         "http://127.0.0.1:3002",
         "http://127.0.0.1:5173",
+        # Production origins
+        "https://plaszyme.org",
+        "https://www.plaszyme.org",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Database path
-DB_PATH = Path(__file__).parent.parent / "plaszyme.db"
+# Database path - check environment variable first, then local file, then parent directory
+import os
+DB_PATH = Path(os.environ.get("DB_PATH", Path(__file__).parent / "plaszyme.db"))
+if not DB_PATH.exists():
+    DB_PATH = Path(__file__).parent.parent / "plaszyme.db"
 
 
 # Pydantic models
